@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>8 เซียน POS</title>
+    <link rel="stylesheet" href="./style.css" />
+    <script src="./app.js" type="module"></script>
+  </head>
+  <body>
+    <header>
+      <div><strong>8 เซียน</strong><span>POINT OF SALE</span></div>
+      <nav>
+        <span id="operator"></span><button id="daily-report">สรุปรายวัน</button
+        ><button id="history">บิลล่าสุด</button><button id="shift-reports" hidden>สรุปกะ</button
+        ><button id="hardware" hidden>อุปกรณ์</button><button id="logout">ออกจากระบบ</button>
+      </nav>
+    </header>
+    <p id="notice" role="status" aria-live="polite"></p>
+    <section id="shift-panel" hidden>
+      <div>
+        <strong id="shift-status">ร้านยังไม่เปิด</strong>
+        <p id="shift-summary"></p>
+      </div>
+      <button id="open-store">เปิดร้าน</button
+      ><button id="close-store" hidden>ปิดร้าน / นับเงินสด</button>
+    </section>
+    <main id="login">
+      <form id="login-form">
+        <p class="eyebrow">ยินดีต้อนรับ</p>
+        <h1>เข้าสู่ระบบคิดเงิน</h1>
+        <p>สำหรับพนักงานคิดเงิน • ใช้บัญชีพนักงาน USER ที่ร้านสร้างให้</p>
+        <label>ชื่อผู้ใช้<input name="username" required autocomplete="username" /></label
+        ><label
+          >รหัสผ่าน<input
+            name="password"
+            type="password"
+            required
+            autocomplete="current-password" /></label
+        ><button class="primary">เข้าสู่ระบบ POS</button>
+      </form>
+    </main>
+    <main id="register" hidden>
+      <section class="catalog">
+        <div class="heading">
+          <div>
+            <p class="eyebrow">หน้าร้าน</p>
+            <h1>รายการสินค้า</h1>
+          </div>
+          <span class="hint">สินค้าและราคาจัดการผ่านเว็บแอดมิน</span>
+        </div>
+        <div class="product-groups" role="group" aria-label="กลุ่มรายการ">
+          <button type="button" data-group="MAIN" aria-pressed="true">หลัก</button>
+          <button type="button" data-group="DISCOUNT" aria-pressed="false">ส่วนลด</button>
+          <button type="button" data-group="PROMOTION" aria-pressed="false">โปรโมชั่น</button>
+        </div>
+        <div id="products" class="products"></div>
+        <section class="catalog-tools" aria-label="สมาชิกและคูปอง">
+          <div class="member-row">
+            <div class="member-details">
+              <p id="member">ลูกค้าทั่วไป</p>
+              <span id="member-phone" hidden></span>
+            </div>
+            <button id="remove-member" hidden>นำสมาชิกออก</button>
+          </div>
+          <form id="scan-form">
+            <input
+              id="scan"
+              placeholder="เบอร์สมาชิก / QR สมาชิก / บาร์โค้ดสินค้า"
+              aria-label="เบอร์โทรสมาชิก QR สมาชิก หรือบาร์โค้ดสินค้า"
+              autocomplete="off"
+              maxlength="200"
+            /><button>เพิ่ม / ค้นหา</button>
+          </form>
+          <form id="coupon-form">
+            <input
+              id="coupon-code"
+              placeholder="กรอกหรือยิงบาร์โค้ดคูปองส่วนลด"
+              aria-label="รหัสคูปองส่วนลด"
+              autocomplete="off"
+              maxlength="32"
+              inputmode="numeric"
+            /><button>ใช้คูปอง</button>
+          </form>
+          <div class="coupon-summary" id="coupon-summary" hidden>
+            <span id="coupon-status" role="status"></span
+            ><button type="button" id="remove-coupon">นำคูปองออก</button>
+          </div>
+        </section>
+      </section>
+      <aside class="checkout">
+        <div class="heading">
+          <h2>บิลปัจจุบัน</h2>
+          <button id="clear">ล้างบิล</button>
+        </div>
+        <div id="cart" role="region" aria-label="รายการสินค้าในบิล" tabindex="0"></div>
+        <div class="checkout-footer">
+          <div class="total"><span>ยอดชำระ</span><strong id="total">฿0.00</strong></div>
+          <fieldset class="payment-methods">
+            <legend>วิธีชำระเงิน</legend>
+            <div class="payment-buttons">
+              <button type="button" data-payment-method="CASH" aria-pressed="true">เงินสด</button>
+              <button type="button" data-payment-method="TRANSFER" aria-pressed="false">
+                โอนเงิน
+              </button>
+            </div>
+          </fieldset>
+          <div class="cash-entry" id="cash-entry">
+            <label
+              >รับเงิน (บาท)<input
+                id="received"
+                type="number"
+                min="0"
+                step="0.01"
+                inputmode="decimal"
+            /></label>
+            <p id="change" aria-live="polite">เงินทอน ฿0.00</p>
+          </div>
+          <p id="transfer-note" class="hint" hidden>ตรวจสอบยอดโอนเข้าจริงก่อนยืนยันรับเงิน</p>
+          <button id="pay" class="primary">ยืนยันรับเงินและปิดบิล</button>
+          <p class="hint checkout-hint">ต้องออนไลน์เพื่อปิดบิล</p>
+        </div>
+      </aside>
+    </main>
+    <dialog id="member-dialog" aria-labelledby="member-dialog-title">
+      <h2 id="member-dialog-title">ยืนยันสมาชิกของบิลนี้</h2>
+      <p id="member-candidate"></p>
+      <p class="hint">
+        กรุณาตรวจชื่อกับลูกค้าก่อนยืนยัน ระบบจะสะสม 1 ครั้งเมื่อรับเงินและปิดบิลสำเร็จ
+      </p>
+      <button id="confirm-member" class="primary">ยืนยันใช้สมาชิกกับบิลนี้</button>
+      <button id="cancel-member" type="button">ยกเลิก</button>
+    </dialog>
+    <dialog id="open-dialog">
+      <form id="open-form">
+        <h2>เปิดร้าน</h2>
+        <label
+          >เงินสดตั้งต้น (บาท)<input
+            name="openingCash"
+            type="number"
+            min="0"
+            max="1000000"
+            step="0.01"
+            required
+            inputmode="decimal" /></label
+        ><button class="primary">ยืนยันเปิดร้าน</button
+        ><button type="button" id="cancel-open">ยกเลิก</button>
+      </form>
+    </dialog>
+    <dialog id="close-dialog">
+      <form id="close-form">
+        <h2>ปิดร้าน</h2>
+        <p id="closing-summary"></p>
+        <label
+          >เงินสดที่นับได้จริง (บาท)<input
+            name="countedCash"
+            type="number"
+            min="0"
+            max="1000000"
+            step="0.01"
+            required
+            inputmode="decimal"
+        /></label>
+        <p class="hint">รวมเงินตั้งต้นและเงินขายสดในลิ้นชัก • ไม่รวมยอดโอน</p>
+        <button class="primary">ยืนยันปิดร้าน</button
+        ><button type="button" id="cancel-close">ยกเลิก</button>
+      </form>
+    </dialog>
+    <dialog id="report-dialog">
+      <h2>สรุปรายรับต่อวัน</h2>
+      <form id="report-form">
+        <label>วันที่ (เวลาไทย)<input id="report-date" type="date" required /></label
+        ><button>ดูสรุป</button>
+      </form>
+      <div id="report-content"></div>
+      <button id="close-report">ปิด</button>
+    </dialog>
+    <dialog id="receipt-dialog">
+      <section id="receipt"></section>
+      <p id="receipt-notice" role="status" aria-live="polite"></p>
+      <div class="receipt-actions">
+        <button id="print" class="primary">พิมพ์ใบเสร็จ</button
+        ><button id="close-receipt">ปิด</button>
+      </div>
+    </dialog>
+    <dialog id="hardware-dialog">
+      <h2>เครื่องพิมพ์และลิ้นชัก</h2>
+      <p>WORREX JP80H • กระดาษ 78–80 มม. • พื้นที่พิมพ์ 72 มม.</p>
+      <p id="hardware-browser-note" hidden>
+        เชื่อม Bluetooth และเปิดลิ้นชักผ่านโปรแกรม 8 Sian POS สำหรับ Windows
+        เปิดเว็บในเบราว์เซอร์ยังพิมพ์ผ่านไดรเวอร์ Windows ได้
+      </p>
+      <div id="hardware-controls">
+        <p>เครื่องที่บันทึกไว้: <strong id="hardware-device">ยังไม่ได้เลือก</strong></p>
+        <div class="hardware-row">
+          <button id="find-printers">ค้นหาเครื่องพิมพ์</button
+          ><select id="printer-device" aria-label="เครื่องพิมพ์ Bluetooth"></select
+          ><button id="connect-printer">เชื่อมต่อ</button>
+        </div>
+        <fieldset>
+          <legend>เมื่อบันทึกชำระสำเร็จ</legend>
+          <label class="hardware-check"
+            ><input type="checkbox" id="auto-print" />พิมพ์ใบเสร็จอัตโนมัติ</label
+          >
+          <label class="hardware-check"
+            ><input type="checkbox" id="auto-drawer" />เปิดลิ้นชักเฉพาะเงินสด
+            (เปิดใช้หลังทดสอบลิ้นชักสำเร็จ)</label
+          >
+          <label class="hardware-check"
+            ><input type="checkbox" id="cut-paper" />ตัดกระดาษหลังพิมพ์</label
+          >
+          <label
+            >ช่องสั่งเปิดลิ้นชัก<select id="drawer-pin">
+              <option value="2">มาตรฐาน (ขา 2)</option>
+              <option value="5">สำรอง (ขา 5)</option>
+            </select></label
+          >
+          <button id="save-hardware">บันทึกการตั้งค่า</button>
+        </fieldset>
+        <button id="test-printer">พิมพ์ทดสอบภาษาไทยและบาร์โค้ด</button>
+        <fieldset>
+          <legend>พิมพ์บาร์โค้ดสินค้า CODE128</legend>
+          <label>สินค้า<select id="barcode-product"></select></label>
+          <button id="print-barcode">พิมพ์บาร์โค้ด 1 ใบ</button>
+        </fieldset>
+        <fieldset>
+          <legend>เปิดลิ้นชักด้วยตนเอง</legend>
+          <label
+            >เหตุผล<input
+              id="drawer-reason"
+              maxlength="120"
+              placeholder="เช่น ทดสอบลิ้นชัก / แลกเงินทอน"
+          /></label>
+          <button id="open-drawer">เปิดลิ้นชัก</button>
+        </fieldset>
+        <p>
+          เครื่องสแกนใช้โหมด HID keyboard และส่ง Enter หลังอ่านรหัส
+          จากนั้นสแกนในช่องสินค้า/สมาชิกของ POS
+        </p>
+      </div>
+      <p id="hardware-status" role="status" aria-live="polite"></p>
+      <button id="close-hardware">ปิด</button>
+    </dialog>
+    <dialog id="history-dialog">
+      <h2 id="history-title">บิลล่าสุด 50 รายการ</h2>
+      <div id="sales"></div>
+      <button id="close-history">ปิด</button>
+    </dialog>
+  </body>
+</html>

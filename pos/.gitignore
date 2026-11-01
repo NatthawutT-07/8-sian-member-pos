@@ -1,0 +1,16 @@
+node_modules/
+dist/
+out/
+release/
+.env
+.env.*
+!.env.example
+*.log
+*.exe
+*.msi
+*.pfx
+*.key
+*.pem
+local-data/
+*.db
+*.db-journal

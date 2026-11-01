@@ -1,0 +1,60 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 576px;
+  min-width: 0;
+  height: auto;
+  background: white;
+  color: black;
+  overflow: hidden;
+}
+body {
+  display: block;
+  font-family: Tahoma, Arial, sans-serif;
+}
+#paper {
+  display: block;
+  margin: 0;
+  padding: 0 16px;
+  width: 576px;
+  box-sizing: border-box;
+}
+#receipt {
+  width: 272px;
+  zoom: 2;
+  font-size: 13px;
+  color: black;
+}
+#receipt h2,
+#receipt h3,
+#receipt p,
+#receipt strong,
+#receipt td,
+#receipt th {
+  color: black;
+}
+#barcode {
+  display: block;
+  margin: 24px auto 0;
+}
+#barcode[hidden] {
+  display: none;
+}
+.label-name {
+  font-size: 20px;
+  text-align: center;
+  overflow-wrap: anywhere;
+  margin: 0 0 8px;
+}
+.label-price {
+  font-size: 20px;
+  text-align: center;
+  margin: 0;
+}
+.test-note {
+  font-size: 13px;
+  text-align: center;
+  border: 1px solid black;
+  padding: 8px 0;
+}

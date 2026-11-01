@@ -1,0 +1,7 @@
+**/node_modules/
+**/dist/
+**/generated/
+**/package-lock.json
+**/public/images/
+**/prisma/migrations/
+**/.env*

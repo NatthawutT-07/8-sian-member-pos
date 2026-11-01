@@ -1,0 +1,30 @@
+{
+  "name": "8-sian-member",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w frontend",
+    "dev:api": "npm run dev -w backend",
+    "build": "npm run build -w frontend",
+    "test": "npm run test -w backend",
+    "dev:pos": "npm --prefix pos start",
+    "build:pos": "npm --prefix pos run build:win",
+    "dev:frontend": "npm run dev -w frontend",
+    "dev:backend": "npm run dev -w backend",
+    "test:integration": "npm run test:integration -w backend",
+    "check:barcode": "npm run check:barcode -w frontend",
+    "format": "prettier --write backend/src backend/tests backend/scripts frontend/src frontend/scripts package.json backend/package.json frontend/package.json .prettierrc.json",
+    "format:check": "prettier --check backend/src backend/tests backend/scripts frontend/src frontend/scripts package.json backend/package.json frontend/package.json .prettierrc.json",
+    "check:views": "npm run check:views -w frontend"
+  },
+  "overrides": {
+    "effect": "3.20.0",
+    "deepmerge-ts": "8.0.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10"
+  }
+}

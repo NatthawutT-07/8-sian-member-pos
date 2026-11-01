@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'"
+    />
+    <link rel="stylesheet" href="../web/style.css" />
+    <link rel="stylesheet" href="./print.css" />
+    <script type="module" src="./print-renderer.js"></script>
+  </head>
+  <body>
+    <main id="paper">
+      <section id="receipt"></section>
+      <canvas id="barcode"></canvas>
+    </main>
+  </body>
+</html>
