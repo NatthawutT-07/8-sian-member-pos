@@ -29,7 +29,7 @@ function createHardware({ request, transport, render, readSettings, saveSettings
     if (!config.deviceId) throw new Error('เลือกเครื่องพิมพ์ในเมนูอุปกรณ์ก่อน');
     return config;
   };
-  async function transmit(operation, payload, reason, saleId, shiftId) {
+  async function transmit(operation, payload, reason, saleId, shiftId, orderId) {
     const config = requireDevice();
     const event = {
       jobId: randomUUID(),
@@ -39,6 +39,7 @@ function createHardware({ request, transport, render, readSettings, saveSettings
       deviceName: config.deviceName,
       ...(saleId ? { saleId } : {}),
       ...(shiftId ? { shiftId } : {}),
+      ...(orderId ? { orderId } : {}),
     };
     // Refuse a drawer/print action if the operator cannot be authenticated and audited.
     await request('hardware/events', event);
@@ -104,6 +105,19 @@ function createHardware({ request, transport, render, readSettings, saveSettings
     async printReceipt({ saleId }) {
       if (typeof saleId !== 'string' || saleId.length > 100) throw new Error('เลขบิลไม่ถูกต้อง');
       return printSale(await request(`sales/${encodeURIComponent(saleId)}`));
+    },
+    async printKitchenTicket({ orderId }) {
+      if (typeof orderId !== 'string' || !/^[a-zA-Z0-9-]{1,100}$/.test(orderId))
+        throw new Error('รหัสออเดอร์ไม่ถูกต้อง');
+      const ticket = await request(`kitchen/orders/${orderId}/ticket`);
+      return transmit(
+        'PRINT_KITCHEN',
+        finishPrint(await render({ kind: 'kitchen', ticket }), settings().cut, 1),
+        'พิมพ์ใบแนบอาหาร',
+        undefined,
+        undefined,
+        orderId,
+      );
     },
     async printShiftReport({ shiftId, automatic = false }) {
       if (
@@ -185,7 +199,14 @@ function createHardware({ request, transport, render, readSettings, saveSettings
       Array.isArray(input)
     )
       throw new Error('คำสั่งอุปกรณ์ไม่ถูกต้อง');
-    await request('me');
+    const user = await request('me');
+    if (
+      user.role === 'CHEF' &&
+      !['status', 'list', 'connect', 'configure', 'testPrint', 'printKitchenTicket'].includes(
+        action,
+      )
+    )
+      throw new Error('บัญชีพ่อครัวไม่มีสิทธิ์ใช้งานคำสั่งนี้');
     if (action === 'status') return actions.status();
     if (busy) throw new Error('อุปกรณ์กำลังทำงาน กรุณารอให้เสร็จก่อน');
     busy = true;

@@ -9,6 +9,7 @@ const actions = [
   'configure',
   'testPrint',
   'printReceipt',
+  'printKitchenTicket',
   'printShiftReport',
   'printBarcode',
   'openDrawer',

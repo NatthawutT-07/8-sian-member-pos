@@ -41,10 +41,10 @@ function raster(bgra, width, height) {
   return Buffer.concat(commands);
 }
 
-function finishPrint(imageBytes, cut = true) {
+function finishPrint(imageBytes, cut = true, feedLines = 4) {
   return Buffer.concat([
     imageBytes,
-    Buffer.from([27, 100, 4]),
+    Buffer.from([27, 100, feedLines]),
     ...(cut ? [Buffer.from([29, 86, 1])] : []),
   ]);
 }

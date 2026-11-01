@@ -1,13 +1,16 @@
 import { renderReceipt } from '../web/receipt.js';
 import { renderShiftReport } from '../web/shift-receipt.js';
+import { renderKitchenTicket } from '../web/kitchen-ticket.js';
 
 const root = document.getElementById('receipt');
 const canvas = document.getElementById('barcode');
-window.preparePrint = async ({ kind, sale, product, code, report }) => {
+window.preparePrint = async ({ kind, sale, product, code, report, ticket }) => {
   root.replaceChildren();
-  canvas.hidden = kind === 'shift';
-  if (kind === 'shift') {
-    renderShiftReport(root, report);
+  root.classList.remove('kitchen-ticket');
+  canvas.hidden = ['shift', 'kitchen'].includes(kind);
+  if (['shift', 'kitchen'].includes(kind)) {
+    if (kind === 'kitchen') renderKitchenTicket(root, ticket);
+    else renderShiftReport(root, report);
     await Promise.all([...root.querySelectorAll('img')].map((image) => image.decode()));
     await document.fonts.ready;
     return Math.ceil(document.getElementById('paper').getBoundingClientRect().height);

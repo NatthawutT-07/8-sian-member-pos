@@ -11,6 +11,21 @@ app.whenReady().then(async () => {
   try {
     for (const [name, input] of [
       ['receipt', { kind: 'test' }],
+      [
+        'kitchen',
+        {
+          kind: 'kitchen',
+          ticket: {
+            id: 'kitchen-test-001',
+            tableNumber: 8,
+            createdAt: '2026-11-02T12:00:00Z',
+            items: [
+              { name: 'หมูสามชั้น', quantity: 2 },
+              { name: 'กุ้งสด', quantity: 10 },
+            ],
+          },
+        },
+      ],
       ['shift-report', { kind: 'shift', report: require('./shift-report-fixture.cjs') }],
       [
         'barcode',

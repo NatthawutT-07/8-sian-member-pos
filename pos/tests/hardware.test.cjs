@@ -62,6 +62,43 @@ test('transfer prints without a drawer pulse', async () => {
   assert.equal(f.writes.length, 1);
   assert.notDeepEqual(f.writes[0], drawerPulse());
 });
+
+test('chef prints a compact kitchen ticket with one feed line and cannot open the drawer', async () => {
+  const writes = [],
+    events = [],
+    renders = [];
+  const handle = createHardware({
+    request: async (route, body) => {
+      if (route === 'me') return { id: 'chef', role: 'CHEF' };
+      if (route === 'kitchen/orders/order-1/ticket')
+        return { id: 'order-1', tableNumber: 8, items: [{ name: 'กุ้ง', quantity: 2 }] };
+      if (route === 'hardware/events') {
+        events.push(body);
+        return { ok: true };
+      }
+      throw new Error(`Unexpected route ${route}`);
+    },
+    transport: async (input) => {
+      writes.push(Buffer.from(input.base64, 'base64'));
+      return { ok: true };
+    },
+    render: async (input) => {
+      renders.push(input);
+      return Buffer.from('ticket-image');
+    },
+    readSettings: () => ({ deviceId: 'printer', deviceName: 'QA' }),
+    saveSettings: () => {},
+  });
+  await handle('printKitchenTicket', { orderId: 'order-1' });
+  assert.equal(renders[0].kind, 'kitchen');
+  assert.equal(renders[0].ticket.tableNumber, 8);
+  assert.deepEqual(writes[0], finishPrint(Buffer.from('ticket-image'), true, 1));
+  assert.equal(events[0].operation, 'PRINT_KITCHEN');
+  assert.equal(events[0].orderId, 'order-1');
+  await assert.rejects(handle('openDrawer', { reason: 'test' }), /ไม่มีสิทธิ์/);
+  await assert.rejects(handle('afterSale', { saleId: 'sale-1' }), /ไม่มีสิทธิ์/);
+  assert.equal(writes.length, 1);
+});
 test('print failure preserves cash drawer outcome and prevents automatic retry', async () => {
   const f = fixture({ renderFails: true });
   const result = await f.handle('afterSale', { saleId: 'sale-1' });

@@ -945,3 +945,229 @@ dialog::backdrop {
     break-inside: avoid;
   }
 }
+
+.table-selection {
+  display: grid;
+  gap: 6px;
+  padding: 12px 0;
+}
+.table-selection select {
+  width: 100%;
+  padding: 10px;
+  font: inherit;
+  border: 1px solid #d8cebd;
+  border-radius: 8px;
+}
+#tables-dialog {
+  width: min(900px, 95vw);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+#table-list,
+#table-orders {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.table-card {
+  border: 1px solid #d8cebd;
+  padding: 16px;
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+}
+.table-card h3,
+.table-card p {
+  margin: 0;
+}
+#zone-options {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0;
+}
+#zone-options label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #d8cebd;
+  border-radius: 8px;
+}
+#zone-options input {
+  width: 22px;
+  height: 22px;
+}
+
+body.kitchen-active {
+  min-height: 100dvh;
+  background: #f3f5ef;
+}
+body.kitchen-active > header {
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 20px;
+}
+body.kitchen-active > header nav {
+  flex-wrap: wrap;
+}
+body.kitchen-active #operator {
+  display: inline;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+#kitchen {
+  max-width: 1500px;
+  margin: auto;
+  padding: 24px;
+}
+.kitchen-toolbar,
+.kitchen-table-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.kitchen-toolbar h1 {
+  margin: 4px 0;
+}
+#kitchen-status {
+  margin-bottom: 0;
+}
+.kitchen-table-tools select {
+  max-width: 360px;
+}
+#kitchen-orders {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 18px;
+  align-items: start;
+}
+.kitchen-order {
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #d5ddd3;
+  border-top: 5px solid #c59445;
+  border-radius: 12px;
+}
+.kitchen-order-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.kitchen-order h2 {
+  margin: 0;
+  font-size: 25px;
+}
+.kitchen-order-heading span {
+  font-size: 13px;
+  color: #58685c;
+}
+.kitchen-order-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 7px 0;
+  font-size: 20px;
+  border-bottom: 1px solid #edf0e8;
+}
+.kitchen-order-item span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.kitchen-order-item strong {
+  flex-shrink: 0;
+}
+.kitchen-order-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+.kitchen-order-actions .primary {
+  grid-column: 1 / -1;
+}
+.kitchen-empty {
+  padding: 40px 0;
+  font-size: 24px;
+}
+#kitchen-summary-dialog {
+  width: min(600px, 94vw);
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+.kitchen-summary-row {
+  display: grid;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid #d5ddd3;
+}
+.kitchen-summary-row strong {
+  font-size: 19px;
+}
+.kitchen-ticket {
+  width: 50mm;
+  color: #000;
+  background: white;
+  font:
+    10pt/1.15 Tahoma,
+    sans-serif;
+}
+.kitchen-ticket h2 {
+  font-size: 15pt;
+  margin: 0 0 2px;
+}
+.kitchen-ticket p {
+  font-size: 9pt;
+  margin: 0 0 4px;
+}
+.kitchen-ticket-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  padding: 1px 0;
+}
+.kitchen-ticket-line span {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.kitchen-ticket-line strong {
+  white-space: nowrap;
+}
+.kitchen-ticket-controls {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  #kitchen {
+    padding: 14px;
+  }
+  .kitchen-order {
+    padding: 14px;
+  }
+}
+@media print {
+  body.kitchen-print #receipt-dialog {
+    display: none !important;
+  }
+  body.kitchen-print #kitchen-ticket-dialog {
+    display: block !important;
+    position: static;
+    width: 50mm;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    max-height: none;
+    overflow: visible;
+  }
+  body.kitchen-print #kitchen-ticket-dialog::backdrop,
+  body.kitchen-print .kitchen-ticket-controls {
+    display: none !important;
+  }
+}

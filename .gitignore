@@ -6,3 +6,6 @@ dist/
 *.log
 /.npm-cache/
 /.tmp/
+# Backend and frontend are independent Git repositories with their own remotes.
+/backend/
+/frontend/

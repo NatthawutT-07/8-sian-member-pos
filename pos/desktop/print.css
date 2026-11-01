@@ -58,3 +58,28 @@ body {
   border: 1px solid black;
   padding: 8px 0;
 }
+#receipt.kitchen-ticket {
+  width: 200px;
+  font-size: 12px;
+  line-height: 1.15;
+}
+#receipt.kitchen-ticket h2 {
+  font-size: 17px;
+  margin: 0 0 2px;
+}
+#receipt.kitchen-ticket p {
+  margin: 0 0 3px;
+  font-size: 10px;
+}
+#receipt.kitchen-ticket .kitchen-ticket-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 1px 0;
+}
+#receipt.kitchen-ticket .kitchen-ticket-line span {
+  overflow-wrap: anywhere;
+}
+#receipt.kitchen-ticket strong {
+  white-space: nowrap;
+}

@@ -1,6 +1,8 @@
 import { renderReceipt, formatMemberPhone } from './receipt.js';
 import { setupHardwareUI, outputPaidSale } from './hardware-ui.js';
 import { renderShiftReport } from './shift-receipt.js';
+import { setupTableOrdering } from './table-ordering.js';
+import { setupKitchen } from './kitchen.js';
 
 const $ = (id) => document.getElementById(id);
 const money = (n) =>
@@ -19,6 +21,7 @@ let products = [],
   busy = false,
   shift = null,
   activeUserId = null,
+  activeRole = null,
   paymentMethod = 'CASH',
   cashReceived = '',
   productGroup = 'MAIN',
@@ -28,7 +31,7 @@ let products = [],
   pending = null,
   currentReceipt = null,
   currentShiftReport = null;
-setupHardwareUI({ products: () => products });
+setupHardwareUI({ products: () => products, role: () => activeRole });
 try {
   pending = JSON.parse(localStorage.getItem('pos-pending') || 'null');
 } catch {
@@ -69,17 +72,41 @@ const run = (fn) => async (event) => {
     notice(error.message || 'เชื่อมต่อไม่ได้ กรุณาลองใหม่');
   }
 };
+const tableOrdering = setupTableOrdering({ api, run, editable, getPending: () => pending });
+const kitchen = setupKitchen({ api, run, notice });
 function showLogin() {
-  document.body.classList.remove('pos-active');
+  kitchen.stop();
+  tableOrdering.stop();
+  document.body.classList.remove('pos-active', 'kitchen-active');
   for (const dialog of document.querySelectorAll('dialog[open]')) dialog.close();
   $('login').hidden = false;
   $('register').hidden = true;
+  $('kitchen').hidden = true;
   $('operator').textContent = '';
   $('shift-panel').hidden = true;
-  for (const id of ['daily-report', 'history', 'shift-reports', 'hardware', 'logout'])
+  for (const id of ['daily-report', 'history', 'shift-reports', 'hardware', 'logout', 'tables'])
     $(id).hidden = true;
 }
 async function start(user) {
+  activeRole = user.role;
+  if (user.role === 'CHEF') {
+    tableOrdering.stop();
+    activeUserId = user.id;
+    products = [];
+    $('operator').textContent = `${user.displayName || user.username} • พ่อครัว`;
+    $('login').hidden = true;
+    $('register').hidden = true;
+    $('shift-panel').hidden = true;
+    $('kitchen').hidden = false;
+    document.body.classList.remove('pos-active');
+    document.body.classList.add('kitchen-active');
+    for (const id of ['daily-report', 'history', 'shift-reports', 'tables']) $(id).hidden = true;
+    $('hardware').hidden = false;
+    $('logout').hidden = false;
+    await kitchen.start();
+    return;
+  }
+  kitchen.stop();
   products = await api('products');
   $('operator').textContent = `${user.displayName || user.username} • USER`;
   activeUserId = user.id;
@@ -105,8 +132,10 @@ async function start(user) {
   $('register').hidden = false;
   document.body.classList.add('pos-active');
   $('shift-panel').hidden = false;
-  for (const id of ['daily-report', 'history', 'shift-reports', 'hardware', 'logout'])
+  for (const id of ['daily-report', 'history', 'shift-reports', 'hardware', 'logout', 'tables'])
     $(id).hidden = false;
+  await tableOrdering.refresh();
+  tableOrdering.start();
   await refreshShift();
   renderProducts();
   renderCart();
@@ -140,6 +169,12 @@ function editable() {
 }
 function add(product) {
   if (!editable()) return;
+  try {
+    tableOrdering.selected();
+  } catch (error) {
+    notice(error.message);
+    return;
+  }
   const line = cart.find((i) => i.product.id === product.id);
   if (product.group === 'DISCOUNT' && subtotal() + product.priceSatang < 0) {
     notice('ส่วนลดมากกว่ายอดสินค้า กรุณาเพิ่มสินค้าก่อน');
@@ -233,6 +268,7 @@ function renderCart() {
   $('cash-entry').hidden = paymentMethod !== 'CASH';
   $('transfer-note').hidden = paymentMethod !== 'TRANSFER';
   $('received').disabled = busy || !!pending;
+  $('table-select').disabled = busy || !!pending;
   for (const button of document.querySelectorAll('[data-payment-method]')) {
     button.setAttribute('aria-pressed', String(button.dataset.paymentMethod === paymentMethod));
     button.disabled = busy || !!pending;
@@ -254,6 +290,11 @@ $('login-form').onsubmit = run(async (event) => {
   await start(user);
 });
 $('logout').onclick = run(async () => {
+  if (activeRole === 'CHEF') {
+    await api('logout', {});
+    showLogin();
+    return;
+  }
   if (busy) return;
   if (pending && localStorage.getItem('pos-pending-user') === activeUserId && !editable()) return;
   if (couponBusy) return;
@@ -443,6 +484,7 @@ $('pay').onclick = run(async () => {
     if (couponIssue() || total() < 0) throw new Error(couponIssue() || 'ส่วนลดเกินยอดสินค้า');
     pending = {
       key: draft.key,
+      tableId: tableOrdering.selected(),
       shiftId: shift.id,
       items: cart.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
       method: paymentMethod,
@@ -464,6 +506,7 @@ $('pay').onclick = run(async () => {
   renderCart();
   try {
     const sale = await api('checkout', pending);
+    tableOrdering.clear();
     pending = null;
     localStorage.removeItem('pos-pending');
     localStorage.removeItem('pos-pending-user');
@@ -475,6 +518,13 @@ $('pay').onclick = run(async () => {
     $('received').value = '';
     cashReceived = '';
     receipt(sale);
+    try {
+      await tableOrdering.configure(sale);
+    } catch {
+      notice(
+        'ชำระเงินสำเร็จแล้ว แต่โหลดโซนไม่ได้ กรุณาเลือกโซนต่อในเมนู โต๊ะ / ออเดอร์อาหาร ห้ามรับเงินซ้ำ',
+      );
+    }
     $('receipt-notice').textContent = window.posHardware
       ? 'บันทึกชำระแล้ว กำลังส่งคำสั่งอุปกรณ์…'
       : '';
@@ -485,6 +535,7 @@ $('pay').onclick = run(async () => {
       $('print').disabled = false;
     }
     await refreshShift();
+    await tableOrdering.refresh();
   } catch (error) {
     // Validation rejects have no payment committed. Network and conflict errors retain the key.
     if (error.status === 400) {

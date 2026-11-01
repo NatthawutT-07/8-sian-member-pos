@@ -17,7 +17,9 @@
       <nav>
         <span id="operator"></span><button id="daily-report">สรุปรายวัน</button
         ><button id="history">บิลล่าสุด</button><button id="shift-reports" hidden>สรุปกะ</button
-        ><button id="hardware" hidden>อุปกรณ์</button><button id="logout">ออกจากระบบ</button>
+        ><button id="hardware" hidden>อุปกรณ์</button
+        ><button id="tables" hidden>โต๊ะ / ออเดอร์อาหาร</button
+        ><button id="logout">ออกจากระบบ</button>
       </nav>
     </header>
     <p id="notice" role="status" aria-live="polite"></p>
@@ -33,7 +35,7 @@
       <form id="login-form">
         <p class="eyebrow">ยินดีต้อนรับ</p>
         <h1>เข้าสู่ระบบคิดเงิน</h1>
-        <p>สำหรับพนักงานคิดเงิน • ใช้บัญชีพนักงาน USER ที่ร้านสร้างให้</p>
+        <p>สำหรับพนักงานคิดเงินและพ่อครัว • ใช้บัญชีที่ร้านสร้างให้</p>
         <label>ชื่อผู้ใช้<input name="username" required autocomplete="username" /></label
         ><label
           >รหัสผ่าน<input
@@ -44,6 +46,34 @@
         ><button class="primary">เข้าสู่ระบบ POS</button>
       </form>
     </main>
+    <main id="kitchen" hidden>
+      <div class="kitchen-toolbar">
+        <div>
+          <p class="eyebrow">ครัว • ออเดอร์เก่าก่อน</p>
+          <h1>ออเดอร์รอทำ</h1>
+          <p id="kitchen-status" role="status"></p>
+        </div>
+        <button id="kitchen-refresh">โหลดออเดอร์ใหม่</button>
+      </div>
+      <div class="kitchen-table-tools">
+        <select id="kitchen-table" aria-label="โต๊ะสำหรับดูยอดสั่งสะสม"></select
+        ><button id="kitchen-summary">ดูยอดสั่งสะสมของโต๊ะ</button>
+      </div>
+      <section id="kitchen-orders" aria-label="ออเดอร์รอทำ เรียงจากเก่าไปใหม่"></section>
+    </main>
+    <dialog id="kitchen-summary-dialog">
+      <h2 id="kitchen-summary-title">ยอดสั่งสะสม</h2>
+      <p id="kitchen-summary-meta"></p>
+      <div id="kitchen-summary-items"></div>
+      <button id="close-kitchen-summary">ปิด</button>
+    </dialog>
+    <dialog id="kitchen-ticket-dialog">
+      <section id="kitchen-ticket-preview"></section>
+      <div class="kitchen-ticket-controls">
+        <button id="print-kitchen-preview">พิมพ์ใบอาหาร</button
+        ><button id="close-kitchen-ticket">ปิด</button>
+      </div>
+    </dialog>
     <main id="register" hidden>
       <section class="catalog">
         <div class="heading">
@@ -93,6 +123,11 @@
         </section>
       </section>
       <aside class="checkout">
+        <label class="table-selection"
+          >โต๊ะลูกค้า<select id="table-select">
+            <option value="">เลือกโต๊ะก่อนคิดเงิน</option>
+          </select></label
+        >
         <div class="heading">
           <h2>บิลปัจจุบัน</h2>
           <button id="clear">ล้างบิล</button>
@@ -126,6 +161,27 @@
         </div>
       </aside>
     </main>
+    <dialog id="zone-dialog" aria-labelledby="zone-title">
+      <form id="zone-form">
+        <h2 id="zone-title">เลือกสิทธิ์โซนก่อนเปิดโต๊ะ</h2>
+        <p id="zone-table"></p>
+        <p>เลือกได้หลายโซน หรือไม่เลือกเลยก็ได้ หากไม่เลือกจะไม่มีอาหารให้สั่ง</p>
+        <div id="zone-options"></div>
+        <p data-dialog-notice role="status"></p>
+        <button id="activate-table" class="primary">ยืนยันสิทธิ์และเปิดโต๊ะ</button>
+        <button type="button" id="later-zones">ไว้ภายหลัง (โต๊ะยังสั่งไม่ได้)</button>
+      </form>
+    </dialog>
+    <dialog id="tables-dialog" aria-labelledby="tables-title">
+      <h2 id="tables-title">โต๊ะและรายการสั่งอาหาร</h2>
+      <button id="refresh-tables">โหลดข้อมูลใหม่</button
+      ><button id="close-tables">ปิดหน้าต่าง</button>
+      <p id="ordering-status" role="status"></p>
+      <h3>สถานะโต๊ะ</h3>
+      <div id="table-list"></div>
+      <h3>รายการอาหารรอดำเนินการ</h3>
+      <div id="table-orders"></div>
+    </dialog>
     <dialog id="member-dialog" aria-labelledby="member-dialog-title">
       <h2 id="member-dialog-title">ยืนยันสมาชิกของบิลนี้</h2>
       <p id="member-candidate"></p>

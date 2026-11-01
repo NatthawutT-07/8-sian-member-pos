@@ -36,6 +36,7 @@ export function renderReceipt(root, sale) {
     meta.append(
       text('p', `เบอร์สมาชิก: ${formatMemberPhone(sale.memberPhone)}`, 'receipt-member-phone'),
     );
+  if (sale.tableNumber) meta.append(text('p', `โต๊ะ: ${sale.tableNumber}`));
   root.append(meta);
   const table = doc.createElement('table');
   table.className = 'receipt-items';

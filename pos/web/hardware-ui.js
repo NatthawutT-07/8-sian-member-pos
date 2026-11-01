@@ -1,6 +1,6 @@
 const $ = (id) => document.getElementById(id);
 
-export function setupHardwareUI({ products }) {
+export function setupHardwareUI({ products, role = () => 'USER' }) {
   const bridge = window.posHardware;
   let working = false;
   const status = (value) => {
@@ -25,8 +25,12 @@ export function setupHardwareUI({ products }) {
       });
     }
   }
-  const sent = (result) =>
-    status(result.warning || 'เครื่องพิมพ์รับข้อมูลแล้ว กรุณาตรวจผลที่เครื่องจริง');
+  const sent = (result) => {
+    const timing = Number.isFinite(result.totalMs)
+      ? ` • ส่งข้อมูล ${(result.totalMs / 1000).toFixed(1)} วินาที`
+      : '';
+    status((result.warning || 'เครื่องพิมพ์รับข้อมูลแล้ว กรุณาตรวจผลที่เครื่องจริง') + timing);
+  };
   const showSettings = ({ settings }) => {
     for (const [id, key] of [
       ['auto-print', 'autoPrint'],
@@ -38,6 +42,11 @@ export function setupHardwareUI({ products }) {
     $('hardware-device').textContent = settings.deviceName || 'ยังไม่ได้เลือกเครื่องพิมพ์';
   };
   $('hardware').onclick = async () => {
+    const chef = role() === 'CHEF';
+    $('print-barcode').closest('fieldset').hidden = chef;
+    $('open-drawer').closest('fieldset').hidden = chef;
+    $('auto-drawer').closest('label').hidden = chef;
+    $('drawer-pin').closest('label').hidden = chef;
     $('hardware-dialog').showModal();
     $('hardware-controls').hidden = !bridge;
     $('hardware-browser-note').hidden = !!bridge;
@@ -70,7 +79,7 @@ export function setupHardwareUI({ products }) {
       status(
         result.devices.length
           ? 'เลือกเครื่องแล้วกดเชื่อมต่อ'
-          : 'ไม่พบ JP80H เปิดเครื่อง และเพิ่มอุปกรณ์ใน Bluetooth ของ Windows ก่อน',
+          : 'ไม่พบเครื่องพิมพ์ เปิดเครื่องและ Bluetooth ของอุปกรณ์ แล้วค้นหาอีกครั้ง',
       );
     });
   $('connect-printer').onclick = () =>

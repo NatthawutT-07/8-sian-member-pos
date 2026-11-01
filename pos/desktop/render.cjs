@@ -21,7 +21,7 @@ function testSale() {
 async function renderPrint(BrowserWindow, input, { previewPath } = {}) {
   const data = { ...input };
   if (data.kind === 'test') data.sale = testSale();
-  if (data.kind !== 'shift')
+  if (!['shift', 'kitchen'].includes(data.kind))
     data.code = barcode(data.kind === 'barcode' ? data.product.barcode : data.sale.receiptNumber);
   const win = new BrowserWindow({
     width: WIDTH,

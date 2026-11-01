@@ -12,14 +12,20 @@
     "test": "node --test tests/*.test.cjs",
     "check:render": "electron scripts/check-render.cjs",
     "check:desktop": "electron scripts/check-desktop.cjs",
-    "check:hardware-ui": "electron scripts/check-hardware-ui.cjs"
+    "check:hardware-ui": "electron scripts/check-hardware-ui.cjs",
+    "prepare:android": "node scripts/prepare-android.cjs",
+    "check:android": "node scripts/check-android.cjs",
+    "check:android-ble": "node scripts/check-android-ble.cjs",
+    "build:android": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android.ps1"
   },
   "dependencies": {
     "jsbarcode": "^3.12.3"
   },
   "devDependencies": {
+    "buffer": "^6.0.3",
     "electron": "^42.0.0",
-    "electron-builder": "^26.0.0"
+    "electron-builder": "^26.0.0",
+    "esbuild": "^0.28.2"
   },
   "build": {
     "appId": "com.8sian.pos",
