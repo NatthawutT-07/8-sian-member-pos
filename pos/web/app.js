@@ -39,13 +39,19 @@ function notice(message = '') {
   for (const el of document.querySelectorAll('[data-dialog-notice]')) el.textContent = message;
 }
 async function api(path, body, method = 'POST') {
-  const response = await fetch(`/api/pos/${path}`, {
-    method: body === undefined ? 'GET' : method,
-    credentials: 'same-origin',
-    headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const data = await response.json();
+  let response, data;
+  if (window.posApi) {
+    response = await window.posApi.request(path, body, method);
+    data = response.data;
+  } else {
+    response = await fetch(`/api/pos/${path}`, {
+      method: body === undefined ? 'GET' : method,
+      credentials: 'same-origin',
+      headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    data = await response.json();
+  }
   if (!response.ok) {
     if (response.status === 401) showLogin();
     throw Object.assign(new Error(data.message || 'ทำรายการไม่สำเร็จ'), {

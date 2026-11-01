@@ -11,6 +11,14 @@ app.whenReady().then(async () => {
     const archive = path.join(packageRoot, 'resources/app.asar');
     const packed = require(path.join(archive, 'package.json'));
     assert.equal(packed.version, require('../package.json').version);
+    for (const file of [
+      'web/index.html',
+      'web/app.js',
+      'web/hardware-ui.js',
+      'desktop/api-client.cjs',
+      'desktop/preload.cjs',
+    ])
+      assert.ok(fs.readFileSync(path.join(archive, file)).length > 0, `Bundled POS asset: ${file}`);
     assert.ok(fs.readFileSync(path.join(archive, 'web/images/logo.png')).length > 0);
     const { renderPrint } = require(path.join(archive, 'desktop/render.cjs'));
     const receipt = await renderPrint(BrowserWindow, { kind: 'test' });

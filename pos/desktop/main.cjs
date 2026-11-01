@@ -1,6 +1,8 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
+const { pathToFileURL } = require('node:url');
+const { apiOrigin, createApiClient } = require('./api-client.cjs');
 const { bluetooth } = require('./bluetooth.cjs');
 const { createHardware, normalizeSettings } = require('./hardware.cjs');
 const { renderPrint } = require('./render.cjs');
@@ -20,29 +22,19 @@ app.whenReady().then(async () => {
   if (!singleInstance) return;
   const configPath = path.join(app.getPath('userData'), 'server.json');
   if (!fs.existsSync(configPath))
-    fs.writeFileSync(configPath, JSON.stringify({ url: 'http://localhost:3001/pos/' }, null, 2));
-  let server;
+    fs.writeFileSync(configPath, JSON.stringify({ apiUrl: 'https://api.8sianracha.com' }, null, 2));
+  let origin;
   try {
-    server = new URL(JSON.parse(fs.readFileSync(configPath, 'utf8')).url);
-    if (
-      server.pathname !== '/pos/' ||
-      server.search ||
-      server.hash ||
-      server.username ||
-      server.password ||
-      !(
-        server.protocol === 'https:' ||
-        (server.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(server.hostname))
-      )
-    )
-      throw new Error('Invalid URL');
+    origin = apiOrigin(JSON.parse(fs.readFileSync(configPath, 'utf8')));
   } catch {
     await dialog.showMessageBox({
       type: 'error',
-      message: `ตั้งค่า URL แบบ HTTPS ที่ลงท้าย /pos/ ใน ${configPath}`,
+      message: 'ตั้งค่า apiUrl เป็น HTTPS origin ของ backend ใน ' + configPath,
     });
     return app.quit();
   }
+  const requestApi = createApiClient(origin);
+  const page = pathToFileURL(path.join(__dirname, '../web/index.html'));
   const win = new BrowserWindow({
     width: 1280,
     height: 850,
@@ -71,29 +63,28 @@ app.whenReady().then(async () => {
       fs.renameSync(`${hardwarePath}.tmp`, hardwarePath);
     },
     request: async (route, body) => {
-      const response = await win.webContents.session.fetch(
-        new URL(`/api/pos/${route}`, server).href,
-        {
-          method: body === undefined ? 'GET' : 'POST',
-          credentials: 'include',
-          redirect: 'error',
-          headers: {
-            Origin: server.origin,
-            ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-          },
-          body: body === undefined ? undefined : JSON.stringify(body),
-          signal: AbortSignal.timeout(15000),
-        },
-      );
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'ตรวจสอบสิทธิ์ POS ไม่สำเร็จ');
-      return data;
+      const result = await requestApi(route, body);
+      if (!result.ok) throw new Error(result.data.message || 'ตรวจสอบสิทธิ์ POS ไม่สำเร็จ');
+      return result.data;
     },
     transport: bluetooth,
     render: (input) => renderPrint(BrowserWindow, input),
   });
+  ipcMain.handle('pos:api', async (event, route, body, method) => {
+    if (!isTrustedFrame(event, win, page))
+      return { ok: false, status: 403, data: { message: 'หน้านี้ไม่มีสิทธิ์เรียก POS' } };
+    try {
+      return await requestApi(route, body, method);
+    } catch {
+      return {
+        ok: false,
+        status: 0,
+        data: { message: 'เชื่อมต่อ backend ไม่สำเร็จ ตรวจอินเทอร์เน็ตและการตั้งค่า server' },
+      };
+    }
+  });
   ipcMain.handle('pos:hardware', async (event, action, input) => {
-    if (!isTrustedFrame(event, win, server))
+    if (!isTrustedFrame(event, win, page))
       return { ok: false, error: 'หน้านี้ไม่มีสิทธิ์ควบคุมอุปกรณ์' };
     try {
       return { ok: true, value: await hardware(action, input) };
@@ -103,9 +94,7 @@ app.whenReady().then(async () => {
   });
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', (event, url) => {
-    const target = new URL(url);
-    if (target.origin !== server.origin || !target.pathname.startsWith('/pos/'))
-      event.preventDefault();
+    if (url !== page.href) event.preventDefault();
   });
   win.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) =>
     callback(false),
@@ -117,6 +106,6 @@ app.whenReady().then(async () => {
         message: `เชื่อมต่อ POS ไม่สำเร็จ ตรวจอินเทอร์เน็ตและ URL ใน ${configPath}`,
       });
   });
-  await win.loadURL(server.href);
+  await win.loadFile(path.join(__dirname, '../web/index.html'));
 });
 app.on('window-all-closed', () => app.quit());

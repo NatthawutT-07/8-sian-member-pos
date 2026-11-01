@@ -1,6 +1,6 @@
 {
   "name": "8sian-pos",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "8 Sian Windows POS",
   "author": "8 Sian",
@@ -11,6 +11,7 @@
     "build:win": "electron-builder --win nsis --x64 --publish never",
     "test": "node --test tests/*.test.cjs",
     "check:render": "electron scripts/check-render.cjs",
+    "check:desktop": "electron scripts/check-desktop.cjs",
     "check:hardware-ui": "electron scripts/check-hardware-ui.cjs"
   },
   "dependencies": {
@@ -28,10 +29,7 @@
     },
     "files": [
       "desktop/**/*",
-      "web/receipt.js",
-      "web/shift-receipt.js",
-      "web/style.css",
-      "web/images/**/*",
+      "web/**/*",
       "package.json"
     ],
     "asarUnpack": [

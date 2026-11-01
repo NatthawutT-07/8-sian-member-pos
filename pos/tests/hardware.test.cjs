@@ -160,15 +160,17 @@ test('CODE128 maintains two-dot bars and quiet zones within paper; oversized cod
   assert.deepEqual([...drawerPulse(5)], [27, 64, 27, 112, 49, 100, 250]);
 });
 test('IPC accepts only the configured POS top-level frame', () => {
-  const frame = { url: 'https://shop.example/pos/' };
+  const frame = { url: 'file:///app/web/index.html' };
   const contents = { mainFrame: frame };
   const win = { webContents: contents };
   const event = { sender: contents, senderFrame: frame };
-  const server = new URL('https://shop.example/pos/');
+  const server = new URL('file:///app/web/index.html');
   assert.equal(isTrustedFrame(event, win, server), true);
   assert.equal(isTrustedFrame({ ...event, senderFrame: { ...frame } }, win, server), false);
   frame.url = 'https://shop.example/member/';
   assert.equal(isTrustedFrame(event, win, server), false);
   frame.url = 'https://evil.example/pos/';
+  assert.equal(isTrustedFrame(event, win, server), false);
+  frame.url = 'file:///app/web/other.html';
   assert.equal(isTrustedFrame(event, win, server), false);
 });

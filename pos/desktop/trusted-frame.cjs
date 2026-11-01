@@ -1,9 +1,8 @@
-function isTrustedFrame(event, win, server) {
+function isTrustedFrame(event, win, page) {
   if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame)
     return false;
   try {
-    const url = new URL(event.senderFrame.url);
-    return url.origin === server.origin && ['/pos/', '/pos/index.html'].includes(url.pathname);
+    return new URL(event.senderFrame.url).href === page.href;
   } catch {
     return false;
   }

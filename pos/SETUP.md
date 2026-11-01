@@ -53,11 +53,11 @@ POS รับเฉพาะบัญชี `PosUser` ที่ active และ
 
 ## โปรแกรม Windows และ .exe
 
-ทดสอบ desktop จากโฟลเดอร์ `pos` ด้วย `npm.cmd run dev` (หรือ `npm.cmd start`) โดยเปิด backend ด้วย `npm.cmd run dev:api` จาก root ในอีก Terminal ก่อน ค่าเริ่มต้นเชื่อม `http://localhost:3001/pos/`
+ทดสอบ desktop จากโฟลเดอร์ `pos` ด้วย `npm.cmd run dev` (หรือ `npm.cmd start`) ค่าเริ่มต้นเชื่อม production API หากทดสอบ backend ในเครื่อง ให้ตั้ง `apiUrl` ใน server.json เป็น `http://localhost:3001` และเปิด backend ในอีก Terminal ก่อน
 
 รัน `npm.cmd install --prefix pos` แล้ว `npm.cmd run build:pos` จาก root จะได้ตัวติดตั้งใน `pos/release/` ค่าเริ่มต้นเป็น Windows x64; ถ้าแท็บเล็ตเป็น ARM ต้อง build และทดสอบ ARM64 แยกกัน Android ใช้ .exe ไม่ได้
 
-แอปสร้าง `%APPDATA%/8sian-pos/server.json` ในการเปิดครั้งแรก ตั้งค่า `url` เป็น `https://โดเมน-backend/pos/` แล้วเปิดแอปใหม่ อนุญาต HTTP เฉพาะ localhost สำหรับพัฒนา ต้อง deploy `pos/web` พร้อม backend (อย่าคัดลอกเฉพาะ backend)
+ตั้งแต่ 0.4.0 แอปโหลดหน้า UI จากไฟล์ที่บรรจุในโปรแกรม ไม่ต้อง deploy `pos/web` บน server ตั้ง `apiUrl` ใน `%APPDATA%/8sian-pos/server.json` เป็น `https://api.8sianracha.com` (ค่าเริ่มต้น) ดูขั้นตอนอัปเดตทั้งหมดใน [คู่มืออัปเดต](../docs/UPDATE-BACKEND-POS.md)
 
 โปรแกรมเป็น client ออนไลน์ ไม่ได้ติดตั้งฐานข้อมูล/backend ลงแท็บเล็ต ตัวติดตั้งยังไม่มีใบรับรอง code signing ของร้าน
 

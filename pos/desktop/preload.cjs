@@ -1,4 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
+contextBridge.exposeInMainWorld('posApi', {
+  request: (route, body, method) => ipcRenderer.invoke('pos:api', route, body, method),
+});
 const actions = [
   'status',
   'list',
