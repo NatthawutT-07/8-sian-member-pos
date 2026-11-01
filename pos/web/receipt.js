@@ -2,7 +2,7 @@ const money = (n) =>
   (n / 100).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export const formatMemberPhone = (value) =>
-  /^\d{10}$/.test(value || '') ? value.replace(/^(\d{3})(\d{3})(\d{4})$/, '$1-$2-$3') : value || '';
+  /^\d{10}$/.test(value || '') ? `xxx-xxx-${value.slice(-4)}` : value || '';
 
 export function renderReceipt(root, sale) {
   const doc = root.ownerDocument;
