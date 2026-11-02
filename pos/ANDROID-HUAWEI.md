@@ -1,10 +1,10 @@
-# POS สำหรับ Huawei MatePad / Android — 0.5.1
+# POS สำหรับ Huawei MatePad / Android — 0.6.0
 
 เป้าหมาย: Huawei MatePad 11.5S รุ่น SLG-W09, HarmonyOS 4.3.0 ที่รองรับ Android APK ไม่ใช่ HarmonyOS NEXT แอปไม่ใช้ Google Play Services รองรับ Android API 26 ขึ้นไป ต้องตรวจบนแท็บเล็ตจริงก่อนใช้งานหน้าร้าน
 
 ## ติดตั้งบน MatePad
 
-1. คัดลอก `pos/release/8-Sian-POS-Huawei-0.5.1.apk` ไปแท็บเล็ตผ่าน USB, Huawei Share หรือช่องทางส่วนตัว ติดตั้งทับรุ่น 0.5.0 ได้ด้วย signing key เดิม ไม่ต้องถอนการติดตั้ง
+1. คัดลอก `pos/release/8-Sian-POS-Huawei-0.6.0.apk` ไปแท็บเล็ตผ่าน USB, Huawei Share หรือช่องทางส่วนตัว ติดตั้งทับรุ่น 0.5.0/0.5.1 ได้ด้วย signing key เดิม ไม่ต้องถอนการติดตั้ง
 2. เปิดไฟล์จาก Files หากระบบถาม ให้อนุญาตติดตั้งแอปจาก Files สำหรับไฟล์นี้
 3. เปิด **8 เซียน POS** แล้วเข้าสู่ระบบด้วยบัญชีพนักงาน USER จากหน้าแอดมิน ไม่ใช้บัญชีแอดมินเข้าสู่ POS
 4. แอปเชื่อม `https://api.8sianracha.com` โดยตรง ไม่ต้องตั้ง server.json และไม่ต้องอัปโหลดหน้า POS ขึ้น server

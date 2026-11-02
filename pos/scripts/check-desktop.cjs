@@ -104,7 +104,7 @@ app.whenReady().then(async () => {
       1,
     );
     require('node:fs').writeFileSync(
-      path.join(root, '../.tmp/pos-kitchen.png'),
+      path.resolve(__dirname, '../../.tmp/pos-kitchen.png'),
       (await win.webContents.capturePage()).toPNG(),
     );
     await win.webContents.executeJavaScript(
