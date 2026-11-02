@@ -114,9 +114,14 @@ export async function outputPaidSale(sale) {
   try {
     const result = await window.posHardware.afterSale({ saleId: sale.id });
     if (result.errors?.length)
-      return `บันทึกชำระแล้ว • ${result.errors.join(' • ')} • พิมพ์ซ้ำจากบิลเดิมได้ ห้ามรับเงินซ้ำ`;
+      return `บันทึกชำระแล้ว • ${result.errors.join(' • ')} • ตรวจอุปกรณ์ก่อนทำซ้ำ เปิดลิ้นชักเองได้ที่เมนูอุปกรณ์ ห้ามรับเงินซ้ำ`;
     return (
-      result.warning || (result.skipped ? '' : 'ส่งคำสั่งอุปกรณ์แล้ว กรุณาตรวจใบเสร็จและลิ้นชัก')
+      result.warning ||
+      (result.skipped
+        ? ''
+        : result.drawerSent
+          ? 'ส่งคำสั่งเปิดลิ้นชักเงินสดแล้ว กรุณาตรวจใบเสร็จและลิ้นชัก'
+          : 'ส่งคำสั่งอุปกรณ์แล้ว กรุณาตรวจใบเสร็จและลิ้นชัก')
     );
   } catch (error) {
     return `บันทึกชำระแล้ว แต่อุปกรณ์ยังไม่พร้อม: ${error.message} • พิมพ์ซ้ำจากบิลเดิมได้`;

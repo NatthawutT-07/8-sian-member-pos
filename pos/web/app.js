@@ -169,12 +169,6 @@ function editable() {
 }
 function add(product) {
   if (!editable()) return;
-  try {
-    tableOrdering.selected();
-  } catch (error) {
-    notice(error.message);
-    return;
-  }
   const line = cart.find((i) => i.product.id === product.id);
   if (product.group === 'DISCOUNT' && subtotal() + product.priceSatang < 0) {
     notice('ส่วนลดมากกว่ายอดสินค้า กรุณาเพิ่มสินค้าก่อน');
@@ -281,7 +275,11 @@ function renderCart() {
     (!pending && (!!couponIssue() || total() < 0)) ||
     (!cart.length && !pending) ||
     (!shift && !pending);
-  $('pay').textContent = pending ? 'ตรวจผล / ยืนยันบิลเดิมอีกครั้ง' : 'ยืนยันรับเงินและปิดบิล';
+  $('pay').textContent = pending
+    ? 'ตรวจผล / ยืนยันบิลเดิมอีกครั้ง'
+    : paymentMethod === 'CASH'
+      ? 'ยืนยันรับเงินสดและปิดบิล'
+      : 'ยืนยันรับเงินโอนและปิดบิล';
 }
 $('login-form').onsubmit = run(async (event) => {
   const form = new FormData(event.target);
@@ -398,6 +396,7 @@ $('clear').onclick = run(async () => {
   clearMember();
   $('received').value = '';
   cashReceived = '';
+  paymentMethod = 'CASH';
   renderCart();
 });
 function saveDraft() {
@@ -482,9 +481,10 @@ $('pay').onclick = run(async () => {
     if (!Number.isSafeInteger(receivedSatang) || receivedSatang < total())
       throw new Error('กรุณากรอกยอดรับเงินให้ครบ');
     if (couponIssue() || total() < 0) throw new Error(couponIssue() || 'ส่วนลดเกินยอดสินค้า');
+    const tableId = tableOrdering.selected();
     pending = {
       key: draft.key,
-      tableId: tableOrdering.selected(),
+      ...(tableId ? { tableId } : {}),
       shiftId: shift.id,
       items: cart.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
       method: paymentMethod,
@@ -517,14 +517,8 @@ $('pay').onclick = run(async () => {
     clearMember();
     $('received').value = '';
     cashReceived = '';
+    paymentMethod = 'CASH';
     receipt(sale);
-    try {
-      await tableOrdering.configure(sale);
-    } catch {
-      notice(
-        'ชำระเงินสำเร็จแล้ว แต่โหลดโซนไม่ได้ กรุณาเลือกโซนต่อในเมนู โต๊ะ / ออเดอร์อาหาร ห้ามรับเงินซ้ำ',
-      );
-    }
     $('receipt-notice').textContent = window.posHardware
       ? 'บันทึกชำระแล้ว กำลังส่งคำสั่งอุปกรณ์…'
       : '';
@@ -533,6 +527,13 @@ $('pay').onclick = run(async () => {
       $('receipt-notice').textContent = await outputPaidSale(sale);
     } finally {
       $('print').disabled = false;
+    }
+    try {
+      await tableOrdering.configure(sale);
+    } catch {
+      notice(
+        'ชำระเงินสำเร็จแล้ว แต่โหลดโซนไม่ได้ กรุณาเลือกโซนต่อในเมนู โต๊ะ / ออเดอร์อาหาร ห้ามรับเงินซ้ำ',
+      );
     }
     await refreshShift();
     await tableOrdering.refresh();
@@ -656,12 +657,6 @@ $('shift-reports').onclick = run(async () => {
 async function refreshShift() {
   const state = await api('shift');
   shift = state.shift;
-  $('shift-status').textContent = shift
-    ? `เปิดร้านแล้ว • รอบวันที่ ${shift.businessDate}`
-    : 'ร้านปิดอยู่ • เปิดร้านก่อนเริ่มรับเงิน';
-  $('shift-summary').textContent = shift
-    ? `เงินตั้งต้น ${money(shift.openingCashSatang)} | ${state.summary.billCount} บิล | ยอดขาย ${money(state.summary.totalSatang)} | เงินสดที่ควรมี ${money(shift.openingCashSatang + state.summary.cashSatang)}`
-    : '';
   $('open-store').hidden = !!shift;
   $('close-store').hidden = !shift;
   renderCart();

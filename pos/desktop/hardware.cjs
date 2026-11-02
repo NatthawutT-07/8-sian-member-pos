@@ -159,13 +159,31 @@ function createHardware({ request, transport, render, readSettings, saveSettings
     },
     async afterSale({ saleId }) {
       const config = settings();
-      if (!config.deviceId || (!config.autoPrint && !config.autoDrawer)) return { skipped: true };
+      if (!config.deviceId)
+        return {
+          skipped: true,
+          warning: 'ยังไม่ได้เลือกเครื่องพิมพ์ จึงไม่ได้สั่งเปิดลิ้นชักหรือพิมพ์ใบเสร็จ',
+        };
+      if (!config.autoPrint && !config.autoDrawer)
+        return {
+          skipped: true,
+          warning: 'ปิดการพิมพ์และเปิดลิ้นชักอัตโนมัติไว้ ตรวจการตั้งค่าในเมนูอุปกรณ์',
+        };
       if (typeof saleId !== 'string' || saleId.length > 100) throw new Error('เลขบิลไม่ถูกต้อง');
       const sale = await request(`sales/${encodeURIComponent(saleId)}`);
       const claim = await request('hardware/claim', { saleId });
-      if (!claim.claimed) return { skipped: true };
+      if (!claim.claimed)
+        return {
+          skipped: true,
+          warning:
+            'บิลนี้มีการตรวจผลอุปกรณ์แล้วหรือไม่เข้าเงื่อนไขเปิดอัตโนมัติ จึงไม่สั่งเปิดลิ้นชักซ้ำ',
+        };
       const errors = [],
         warnings = [];
+      let drawerSent = false;
+      if (sale.method === 'CASH' && !config.autoDrawer)
+        warnings.push('ยังไม่ได้เปิดลิ้นชัก: ปิดตัวเลือกเปิดลิ้นชักเฉพาะเงินสดไว้ในเมนูอุปกรณ์');
+      if (sale.method !== 'CASH') warnings.push('บิลนี้บันทึกเป็นเงินโอน จึงไม่สั่งเปิดลิ้นชัก');
       // Open after the durable paid sale, independently of a later printing failure.
       if (config.autoDrawer && claim.cash && sale.method === 'CASH') {
         try {
@@ -175,6 +193,7 @@ function createHardware({ request, transport, render, readSettings, saveSettings
             'รับชำระเงินสด',
             sale.id,
           );
+          drawerSent = true;
           if (result.warning) warnings.push(result.warning);
         } catch (error) {
           errors.push(`ลิ้นชัก: ${error.message}`);
@@ -188,7 +207,7 @@ function createHardware({ request, transport, render, readSettings, saveSettings
           errors.push(`ใบเสร็จ: ${error.message}`);
         }
       }
-      return { errors, warning: warnings.join(' • ') };
+      return { errors, drawerSent, warning: warnings.join(' • ') };
     },
   };
   return async function handle(action, input = {}) {

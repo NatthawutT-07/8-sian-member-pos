@@ -57,6 +57,7 @@ app.whenReady().then(async () => {
     );
     api.get('/api/pos/me', (_, res) => res.json(user));
     api.get('/api/pos/products', (_, res) => res.json([product]));
+    api.get('/api/pos/tables', (_, res) => res.json([]));
     api.get('/api/pos/shift', (_, res) =>
       res.json({
         shift: shift.closedAt ? null : shift,
@@ -179,6 +180,16 @@ app.whenReady().then(async () => {
         return { ok: false, error: error.message };
       }
     });
+    ipcMain.handle('pos:api', async (event, route, body) => {
+      assert.ok(isTrustedFrame(event, win, new URL(`${base}/pos/`)));
+      const response = await win.webContents.session.fetch(`${base}/api/pos/${route}`, {
+        credentials: 'include',
+        method: body === undefined ? 'GET' : 'POST',
+        headers: { Origin: base, 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      return { ok: response.ok, status: response.status, data: await response.json() };
+    });
     const js = (code) => win.webContents.executeJavaScript(code);
     const wait = async (condition) => {
       for (let i = 0; i < 150; i++) {
@@ -242,7 +253,7 @@ app.whenReady().then(async () => {
       'document.getElementById("close-receipt").click();document.querySelector(".product").click();document.querySelector("[data-payment-method=TRANSFER]").click();document.getElementById("pay").click()',
     );
     await wait(
-      'document.getElementById("receipt-dialog").open && !document.getElementById("print").disabled && document.getElementById("receipt-notice").textContent.includes("ส่งคำสั่ง")',
+      'document.getElementById("receipt-dialog").open && !document.getElementById("print").disabled && document.getElementById("receipt-notice").textContent.includes("เงินโอน")',
     );
     assert.equal(sales.length, 2);
     assert.equal(writes.length, 7);

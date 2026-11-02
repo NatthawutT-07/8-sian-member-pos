@@ -4,11 +4,17 @@ const { createHardware, normalizeSettings } = require('../desktop/hardware.cjs')
 const { barcode, raster, drawerPulse, finishPrint } = require('../desktop/escpos.cjs');
 const { isTrustedFrame } = require('../desktop/trusted-frame.cjs');
 
-function fixture({ method = 'CASH', renderFails = false, writeFails = false } = {}) {
+function fixture({
+  method = 'CASH',
+  renderFails = false,
+  writeFails = false,
+  autoDrawer = true,
+  deviceId = 'BluetoothLE#printer',
+} = {}) {
   let settings = normalizeSettings({
-    deviceId: 'BluetoothLE#printer',
+    deviceId,
     deviceName: 'JP80H-test',
-    autoDrawer: true,
+    autoDrawer,
   });
   const requests = [],
     writes = [],
@@ -61,6 +67,20 @@ test('transfer prints without a drawer pulse', async () => {
   await f.handle('afterSale', { saleId: 'sale-1' });
   assert.equal(f.writes.length, 1);
   assert.notDeepEqual(f.writes[0], drawerPulse());
+});
+
+test('automatic output explains why no cash drawer command was sent', async () => {
+  const disabled = fixture({ autoDrawer: false });
+  const result = await disabled.handle('afterSale', { saleId: 'sale-1' });
+  assert.equal(result.drawerSent, false);
+  assert.match(result.warning, /ปิดตัวเลือก/);
+  assert.equal(disabled.writes.filter((bytes) => bytes.equals(drawerPulse())).length, 0);
+  assert.equal(
+    (await fixture({ deviceId: '' }).handle('afterSale', { saleId: 'sale-1' })).skipped,
+    true,
+  );
+  const transfer = await fixture({ method: 'TRANSFER' }).handle('afterSale', { saleId: 'sale-1' });
+  assert.match(transfer.warning, /เงินโอน/);
 });
 
 test('chef prints a compact kitchen ticket with one feed line and cannot open the drawer', async () => {

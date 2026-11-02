@@ -13,7 +13,7 @@ export function setupTableOrdering({ api, run, editable, getPending }) {
     const rows = await api('tables');
     const selected = getPending()?.tableId || $('table-select').value;
     tables = rows;
-    $('table-select').replaceChildren(new Option('เลือกโต๊ะก่อนคิดเงิน', ''));
+    $('table-select').replaceChildren(new Option('ไม่ระบุโต๊ะ (คิดเงินได้ตามปกติ)', ''));
     for (const table of rows) {
       const option = new Option(
         `โต๊ะ ${table.number}${table.sessionId ? ' • เปิดใช้งาน' : ' • ว่าง'}`,
@@ -165,7 +165,7 @@ export function setupTableOrdering({ api, run, editable, getPending }) {
     configure,
     selected() {
       const id = $('table-select').value;
-      if (!id) throw new Error('กรุณาเลือกโต๊ะก่อนชำระเงิน');
+      if (!id) return undefined;
       if (tables.find((table) => table.id === id)?.sessionId)
         throw new Error('โต๊ะนี้เปิดอยู่ กรุณาเลือกโต๊ะว่าง');
       return id;

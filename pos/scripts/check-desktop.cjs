@@ -11,7 +11,15 @@ app.whenReady().then(async () => {
   try {
     const root = process.argv[2] ? path.resolve(process.argv[2]) : path.resolve(__dirname, '..');
     const page = pathToFileURL(path.join(root, 'web/index.html'));
-    const routes = [];
+    const routes = [],
+      checkoutRequests = [];
+    const product = {
+      id: 'product-test',
+      name: 'อาหารทดสอบ',
+      priceSatang: 10000,
+      active: true,
+      group: 'MAIN',
+    };
     let role = 'USER',
       hasOrder = true;
     const order = {
@@ -34,10 +42,27 @@ app.whenReady().then(async () => {
         preload: path.join(root, 'desktop/preload.cjs'),
       },
     });
-    ipcMain.handle('pos:api', (event, route) => {
+    ipcMain.handle('pos:api', (event, route, body) => {
       assert.ok(isTrustedFrame(event, win, page));
       routes.push(route);
       if (route === 'me') return { ok: false, status: 401, data: { message: 'Login required' } };
+      if (route === 'checkout') {
+        checkoutRequests.push(body);
+        return {
+          ok: true,
+          status: 200,
+          data: {
+            id: 'sale-test',
+            receiptNumber: 'QA-001',
+            createdAt: new Date().toISOString(),
+            items: [{ ...product, quantity: 1 }],
+            totalSatang: 10000,
+            method: body.method,
+            receivedSatang: 10000,
+            changeSatang: 0,
+          },
+        };
+      }
       if (route === 'kitchen/orders/order-1/complete') hasOrder = false;
       const data =
         route === 'login'
@@ -53,19 +78,28 @@ app.whenReady().then(async () => {
                     tableNumber: 8,
                     receiptNumber: 'QA-001',
                     orderCount: 1,
-                    quantity: 12,
+                    quantity: 17,
                     items: [
-                      { name: 'หมูสามชั้น', quantity: 2, pending: 2, completed: 0 },
-                      { name: 'กุ้งสด', quantity: 10, pending: 10, completed: 0 },
+                      { name: 'หมูสามชั้น', quantity: 2, pending: 0, completed: 2 },
+                      { name: 'กุ้งสด', quantity: 10, pending: 0, completed: 10 },
+                      { name: 'อาหารยังรอทำ', quantity: 5, pending: 5, completed: 0 },
                     ],
                   }
                 : route === 'products'
-                  ? []
+                  ? [product]
                   : route === 'tables'
                     ? []
-                    : { shift: null };
+                    : {
+                        shift: {
+                          id: 'shift-test',
+                          businessDate: '2026-11-02',
+                          openingCashSatang: 0,
+                        },
+                        summary: { billCount: 0, totalSatang: 0, cashSatang: 0 },
+                      };
       return { ok: true, status: 200, data };
     });
+    ipcMain.handle('pos:hardware', () => ({ ok: true, value: { skipped: true } }));
     await win.loadFile(path.join(root, 'web/index.html'));
     await new Promise((resolve) => setTimeout(resolve, 500));
     assert.ok(routes.includes('me'), 'local ES modules must load and invoke the preload API');
@@ -80,6 +114,54 @@ app.whenReady().then(async () => {
     );
     console.log(
       'PASS: bundled local UI loads modules, authenticates through preload and opens the POS without hosted UI',
+    );
+    await win.webContents.executeJavaScript(
+      `document.querySelector('.product').click(); document.getElementById('received').value = '100'; document.getElementById('received').dispatchEvent(new Event('input')); document.getElementById('pay').click();`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    assert.equal(checkoutRequests.length, 1, 'cashier can pay without selecting a table');
+    assert.equal(Object.hasOwn(checkoutRequests[0], 'tableId'), false);
+    assert.equal(
+      await win.webContents.executeJavaScript('document.getElementById("zone-dialog").open'),
+      false,
+    );
+    assert.equal(
+      await win.webContents.executeJavaScript('document.getElementById("receipt-dialog").open'),
+      true,
+    );
+    console.log(
+      'PASS: no-table checkout sends no tableId, issues receipt and does not request table zones',
+    );
+    assert.equal(
+      await win.webContents.executeJavaScript(
+        'document.getElementById("shift-status") === null && document.getElementById("shift-summary") === null',
+      ),
+      true,
+    );
+    await win.webContents.executeJavaScript(
+      `document.getElementById('close-receipt').click(); document.querySelector('.product').click(); document.querySelector('[data-payment-method=TRANSFER]').click();`,
+    );
+    assert.ok(
+      await win.webContents.executeJavaScript(
+        'document.getElementById("pay").textContent.includes("เงินโอน")',
+      ),
+    );
+    await win.webContents.executeJavaScript('document.getElementById("pay").click()');
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    assert.equal(checkoutRequests[1].method, 'TRANSFER');
+    assert.equal(
+      await win.webContents.executeJavaScript(
+        'document.querySelector("[data-payment-method=CASH]").getAttribute("aria-pressed")',
+      ),
+      'true',
+    );
+    await win.webContents.executeJavaScript(
+      `document.getElementById('close-receipt').click(); document.querySelector('.product').click(); document.getElementById('received').value='100'; document.getElementById('received').dispatchEvent(new Event('input')); document.getElementById('pay').click();`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    assert.equal(checkoutRequests[2].method, 'CASH');
+    console.log(
+      'PASS: shift totals removed; payment buttons name the method and the next bill resets from transfer to cash',
     );
     role = 'CHEF';
     const start = routes.length;
@@ -121,6 +203,12 @@ app.whenReady().then(async () => {
       await win.webContents.executeJavaScript(
         'document.getElementById("kitchen-summary-meta").textContent.includes("12")',
       ),
+    );
+    assert.equal(
+      await win.webContents.executeJavaScript(
+        'document.getElementById("kitchen-summary-items").textContent.includes("อาหารยังรอทำ")',
+      ),
+      false,
     );
     await win.webContents.executeJavaScript(
       'document.getElementById("close-kitchen-summary").click(); document.querySelector(".kitchen-order-actions .primary").click()',

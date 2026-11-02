@@ -18,19 +18,20 @@ export function setupKitchen({ api, run, notice }) {
     const result = await api(`kitchen/tables/${tableId}/${sessionId}/summary`);
     if (!active) return;
     summary = { tableId, sessionId };
-    $('kitchen-summary-title').textContent = `ยอดสั่งสะสม • โต๊ะ ${result.tableNumber}`;
+    const completedItems = result.items
+      .map((item) => ({ ...item, quantity: item.completed ?? item.quantity }))
+      .filter((item) => item.quantity > 0);
+    const completedQuantity = completedItems.reduce((sum, item) => sum + item.quantity, 0);
+    $('kitchen-summary-title').textContent = `อาหารที่สำเร็จแล้ว • โต๊ะ ${result.tableNumber}`;
     $('kitchen-summary-meta').textContent =
-      `บิล ${result.receiptNumber || '—'} • ${result.orderCount} ออเดอร์ • รวม ${result.quantity} หน่วย`;
-    const rows = result.items.map((item) => {
+      `บิล ${result.receiptNumber || '—'} • สำเร็จรวม ${completedQuantity} หน่วย`;
+    const rows = completedItems.map((item) => {
       const row = el('div', '', 'kitchen-summary-row');
-      row.append(
-        el('strong', item.name),
-        el('span', `รวม ${item.quantity} • รอทำ ${item.pending} • สำเร็จ ${item.completed}`),
-      );
+      row.append(el('strong', item.name), el('span', `สำเร็จแล้ว ${item.quantity}`));
       return row;
     });
     $('kitchen-summary-items').replaceChildren(
-      ...(rows.length ? rows : [el('p', 'ยังไม่มีรายการสั่งในรอบนี้')]),
+      ...(rows.length ? rows : [el('p', 'ยังไม่มีอาหารที่ทำสำเร็จในรอบนี้')]),
     );
     if (!$('kitchen-summary-dialog').open) $('kitchen-summary-dialog').showModal();
   }
@@ -62,7 +63,7 @@ export function setupKitchen({ api, run, notice }) {
       const [orders, tables] = await Promise.all([api('kitchen/orders'), api('kitchen/tables')]);
       if (!active) return;
       const selected = $('kitchen-table').value;
-      $('kitchen-table').replaceChildren(new Option('เลือกโต๊ะเพื่อดูยอดสะสม', ''));
+      $('kitchen-table').replaceChildren(new Option('เลือกโต๊ะที่ยังมีลูกค้า', ''));
       for (const table of tables)
         $('kitchen-table').append(
           new Option(`โต๊ะ ${table.number}`, `${table.id}/${table.sessionId}`),
@@ -109,7 +110,7 @@ export function setupKitchen({ api, run, notice }) {
           card.append(row);
         }
         const actions = el('div', '', 'kitchen-order-actions');
-        const total = el('button', 'ยอดรวมโต๊ะ');
+        const total = el('button', 'ยอดอาหารสำเร็จ');
         total.onclick = work(() => showSummary(order.tableId, order.sessionId));
         const print = el('button', 'พิมพ์ใบอาหาร');
         print.onclick = work(() => printOrder(order.id));
