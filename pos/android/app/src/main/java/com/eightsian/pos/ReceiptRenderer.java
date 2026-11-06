@@ -69,7 +69,8 @@ final class ReceiptRenderer {
                         for (int y = 0; y < rows; y++) for (int x = 0; x < 576; x++) {
                             int color = colors[y * 576 + x];
                             int gray = (Color.red(color) * 299 + Color.green(color) * 587 + Color.blue(color) * 114) / 1000;
-                            if (gray < 180) pixels[y * 72 + x / 8] |= (byte) (128 >> (x % 8));
+                            // Match desktop: retain light glyph edges; solid barcode geometry stays unchanged.
+                            if (gray < 200) pixels[y * 72 + x / 8] |= (byte) (128 >> (x % 8));
                         }
                         output.write(pixels);
                         bitmap.recycle();

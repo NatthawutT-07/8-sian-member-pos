@@ -24,7 +24,17 @@ body {
   width: 272px;
   zoom: 2;
   font-size: 13px;
+  font-weight: 600;
   color: black;
+}
+/* Thermal raster output needs heavier glyphs than the on-screen preview. */
+#receipt .receipt-items th {
+  font-weight: 600;
+}
+#receipt .receipt-title,
+#receipt .receipt-grand-total,
+#receipt .receipt-footer {
+  border-color: black;
 }
 #receipt h2,
 #receipt h3,

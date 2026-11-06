@@ -216,6 +216,14 @@ test('CODE128 maintains two-dot bars and quiet zones within paper; oversized cod
   assert.throws(() => barcode('\x1bp'));
   assert.deepEqual([...drawerPulse(5)], [27, 64, 27, 112, 49, 100, 250]);
 });
+
+test('thermal raster retains light glyph edges but keeps white gaps and barcode bars exact', () => {
+  const pixels = Buffer.alloc(576 * 4, 255);
+  for (const [x, gray] of [[0, 190], [1, 200], [2, 0], [3, 0], [4, 255]]) {
+    pixels[x * 4] = pixels[x * 4 + 1] = pixels[x * 4 + 2] = gray;
+  }
+  assert.equal(raster(pixels, 576, 1)[13], 0b10110000);
+});
 test('IPC accepts only the configured POS top-level frame', () => {
   const frame = { url: 'file:///app/web/index.html' };
   const contents = { mainFrame: frame };

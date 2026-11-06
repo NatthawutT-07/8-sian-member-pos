@@ -33,7 +33,8 @@ function raster(bgra, width, height) {
         const i = ((top + y) * width + x) * 4;
         const gray = (bgra[i] * 114 + bgra[i + 1] * 587 + bgra[i + 2] * 299) / 1000;
         const onWhite = 255 - ((255 - gray) * bgra[i + 3]) / 255;
-        if (onWhite < 180) pixels[y * stride + (x >> 3)] |= 0x80 >> (x & 7);
+        // Retain more antialiased edges of Thai glyphs without widening solid barcode bars.
+        if (onWhite < 200) pixels[y * stride + (x >> 3)] |= 0x80 >> (x & 7);
       }
     }
     commands.push(Buffer.from([29, 118, 48, 0, stride, 0, rows, 0]), pixels);
