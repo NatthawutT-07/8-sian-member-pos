@@ -62,7 +62,6 @@ final class ReceiptRenderer {
                         canvas.drawColor(Color.WHITE);
                         canvas.translate(0, -top);
                         view.draw(canvas);
-                        output.write(new byte[]{29, 118, 48, 0, 72, 0, (byte) rows, 0});
                         byte[] pixels = new byte[72 * rows];
                         int[] colors = new int[576 * rows];
                         bitmap.getPixels(colors, 0, 576, 0, 0, 576, rows);
@@ -72,7 +71,7 @@ final class ReceiptRenderer {
                             // Match desktop: retain light glyph edges; solid barcode geometry stays unchanged.
                             if (gray < 200) pixels[y * 72 + x / 8] |= (byte) (128 >> (x % 8));
                         }
-                        output.write(pixels);
+                        RasterBands.write(output, pixels, rows);
                         bitmap.recycle();
                     }
                     job.complete(android.util.Base64.encodeToString(output.toByteArray(), android.util.Base64.NO_WRAP));
