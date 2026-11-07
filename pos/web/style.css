@@ -1111,34 +1111,45 @@ body.kitchen-active #operator {
   font-size: 19px;
 }
 .kitchen-ticket {
-  width: 50mm;
+  width: 72mm;
+  box-sizing: border-box;
+  padding: 0 2mm;
   color: #000;
   background: white;
   font:
-    10pt/1.15 Tahoma,
+    600 14pt/1.3 Tahoma,
     sans-serif;
 }
 .kitchen-ticket h2 {
-  font-size: 15pt;
-  margin: 0 0 2px;
+  font-size: 32pt;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  margin: 0 0 8px;
 }
 .kitchen-ticket p {
   font-size: 9pt;
-  margin: 0 0 4px;
+  text-align: center;
+  margin: 0 0 8px;
 }
 .kitchen-ticket-line {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 6px;
-  padding: 1px 0;
+  gap: 12px;
+  padding: 4px 0;
 }
 .kitchen-ticket-line span {
   overflow-wrap: anywhere;
   min-width: 0;
+  text-align: left;
 }
 .kitchen-ticket-line strong {
   white-space: nowrap;
+  flex-shrink: 0;
+  text-align: right;
+  font-weight: 800;
 }
 .kitchen-ticket-controls {
   margin-top: 16px;
@@ -1160,7 +1171,7 @@ body.kitchen-active #operator {
   body.kitchen-print #kitchen-ticket-dialog {
     display: block !important;
     position: static;
-    width: 50mm;
+    width: 72mm;
     margin: 0;
     padding: 0;
     border: 0;
