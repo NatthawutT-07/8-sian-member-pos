@@ -55,6 +55,10 @@ Gradle wrapper ดาวน์โหลด Gradle ที่กำหนดไว
 
 ## การตรวจสอบ
 
+### ปิดโต๊ะบน Huawei ใน 0.6.6
+
+เปลี่ยนการยืนยันปิดโต๊ะจาก `window.confirm()` เป็น HTML dialog เพราะ Android WebView ไม่มีตัวจัดการ JavaScript confirm ในแอปนี้ เปิดหน้าต่างโต๊ะก่อนโหลดข้อมูลและแสดงข้อผิดพลาดภายในหน้าต่าง โหลดสถานะโต๊ะก่อนออเดอร์เพื่อให้ปิดโต๊ะได้แม้โหลดคิวไม่สำเร็จ บัญชี USER ใช้สิทธิ์เดิม ไม่ขยายสิทธิ์ CHEF และไม่เปลี่ยน QR ทดสอบ UI จำลอง USER รวมยกเลิก/ยืนยันปิดโต๊ะ กรณีโหลดออเดอร์ล้มเหลว และปิดการใช้ native confirm แล้ว ติดตั้ง `pos/release/8-Sian-POS-Huawei-0.6.6.apk` ทับแอปเดิมด้วย signing key เดิม และทดสอบการเปิด/ปิดโต๊ะบน Huawei จริงอีกครั้ง
+
 - Compile Java/Android APK และตรวจ signature / ไฟล์ที่บรรจุ
 - ทดสอบ JS bridge ที่ bundle จริงร่วมกับตรรกะ audit/claim/พิมพ์/ลิ้นชักผ่าน native fixture
 - POS unit tests ชุดเดิม

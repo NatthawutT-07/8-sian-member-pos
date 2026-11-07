@@ -57,7 +57,19 @@ app.whenReady().then(async () => {
     );
     api.get('/api/pos/me', (_, res) => res.json(user));
     api.get('/api/pos/products', (_, res) => res.json([product]));
-    api.get('/api/pos/tables', (_, res) => res.json([]));
+    const table = { id: 'table-test', number: 8, sessionId: 'round-test', orderingEnabled: true, zones: ['อาหาร'] };
+    let tableCloses = 0, failOrders = true;
+    api.get('/api/pos/tables', (_, res) => res.json([table]));
+    api.get('/api/pos/table-orders', (_, res) => failOrders
+      ? res.status(503).json({ message: 'โหลดออเดอร์ไม่สำเร็จ (ทดสอบ)' }) : res.json([]));
+    api.post('/api/pos/tables/:id/close', (req, res) => {
+      assert.equal(user.role, 'USER');
+      assert.equal(req.params.id, table.id);
+      assert.equal(req.body.sessionId, table.sessionId);
+      tableCloses++;
+      table.sessionId = null;
+      res.json({ ok: true });
+    });
     api.get('/api/pos/shift', (_, res) =>
       res.json({
         shift: shift.closedAt ? null : shift,
@@ -200,6 +212,20 @@ app.whenReady().then(async () => {
     };
     await win.loadURL(`${base}/pos/`);
     await wait('document.querySelector(".product") !== null');
+    await js('window.confirm = () => { throw new Error("Native confirm unavailable in WebView"); }; document.getElementById("tables").click()');
+    await wait('document.getElementById("tables-dialog").open && document.querySelector("#table-list button") !== null && document.querySelector("#tables-dialog [data-dialog-notice]").textContent.includes("โหลดออเดอร์")');
+    await js('document.querySelector("#table-list button").click()');
+    await wait('document.getElementById("confirm-action-dialog")?.open');
+    await js('document.getElementById("cancel-action").click()');
+    await wait('!document.getElementById("confirm-action-dialog")');
+    assert.equal(tableCloses, 0);
+    failOrders = false;
+    await js('document.querySelector("#table-list button").click()');
+    await wait('document.getElementById("confirm-action-dialog")?.open');
+    await js('document.getElementById("confirm-action").click()');
+    await wait('document.getElementById("table-list").textContent.includes("ปิดสั่งอาหาร") && !document.querySelector("#table-list button")');
+    assert.equal(tableCloses, 1);
+    await js('document.getElementById("close-tables").click()');
     await js('document.getElementById("hardware").click()');
     await wait('!document.getElementById("find-printers").disabled');
     await js('document.getElementById("find-printers").click()');
@@ -256,6 +282,7 @@ app.whenReady().then(async () => {
       'document.getElementById("receipt-dialog").open && !document.getElementById("print").disabled && document.getElementById("receipt-notice").textContent.includes("เงินโอน")',
     );
     assert.equal(sales.length, 2);
+    await wait('!document.getElementById("table-select").disabled');
     assert.equal(writes.length, 7);
     assert.equal(writes.filter((bytes) => bytes.equals(drawerPulse())).length, 2);
     assert.ok(

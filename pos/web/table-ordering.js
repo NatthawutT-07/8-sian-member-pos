@@ -1,3 +1,5 @@
+import { confirmAction } from './confirm-action.js';
+
 export function setupTableOrdering({ api, run, editable, getPending }) {
   const $ = (id) => document.getElementById(id);
   const text = (tag, value) => {
@@ -29,7 +31,6 @@ export function setupTableOrdering({ api, run, editable, getPending }) {
     refreshing = true;
     try {
       await refresh();
-      const orders = await api('table-orders');
       $('table-list').replaceChildren();
       for (const table of tables) {
         const row = text('div', '');
@@ -56,9 +57,9 @@ export function setupTableOrdering({ api, run, editable, getPending }) {
           const button = text('button', 'ลูกค้าออกแล้ว / ปิดสั่งอาหาร');
           button.onclick = run(async () => {
             if (
-              !confirm(
+              !(await confirmAction(
                 `ยืนยันปิดสั่งอาหารโต๊ะ ${table.number} และยกเลิกรายการอาหารที่ยังค้างของรอบนี้?`,
-              )
+              ))
             )
               return;
             button.disabled = true;
@@ -74,6 +75,7 @@ export function setupTableOrdering({ api, run, editable, getPending }) {
         $('table-list').append(row);
       }
       $('table-orders').replaceChildren();
+      const orders = await api('table-orders');
       if (!orders.length) $('table-orders').append(text('p', 'ไม่มีรายการรอดำเนินการ'));
       for (const order of orders) {
         const card = text('article', '');
@@ -155,8 +157,8 @@ export function setupTableOrdering({ api, run, editable, getPending }) {
     if (!editable()) $('table-select').value = getPending()?.tableId || '';
   };
   $('tables').onclick = run(async () => {
-    await render();
     $('tables-dialog').showModal();
+    await render();
   });
   $('refresh-tables').onclick = run(render);
   $('close-tables').onclick = () => $('tables-dialog').close();
