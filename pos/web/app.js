@@ -84,7 +84,7 @@ function showLogin() {
   $('kitchen').hidden = true;
   $('operator').textContent = '';
   $('shift-panel').hidden = true;
-  for (const id of ['daily-report', 'history', 'shift-reports', 'hardware', 'logout', 'tables'])
+  for (const id of ['daily-report', 'history', 'hardware', 'logout', 'tables'])
     $(id).hidden = true;
 }
 async function start(user) {
@@ -100,7 +100,7 @@ async function start(user) {
     $('kitchen').hidden = false;
     document.body.classList.remove('pos-active');
     document.body.classList.add('kitchen-active');
-    for (const id of ['daily-report', 'history', 'shift-reports', 'tables']) $(id).hidden = true;
+    for (const id of ['daily-report', 'history', 'tables']) $(id).hidden = true;
     $('hardware').hidden = false;
     $('logout').hidden = false;
     await kitchen.start();
@@ -132,9 +132,10 @@ async function start(user) {
   $('register').hidden = false;
   document.body.classList.add('pos-active');
   $('shift-panel').hidden = false;
-  for (const id of ['daily-report', 'history', 'shift-reports', 'hardware', 'logout', 'tables'])
+  for (const id of ['daily-report', 'history', 'hardware', 'logout', 'tables'])
     $(id).hidden = false;
   await tableOrdering.refresh();
+
   tableOrdering.start();
   await refreshShift();
   renderProducts();
@@ -594,7 +595,7 @@ $('close-receipt').onclick = () => {
   $('scan').focus();
 };
 $('history').onclick = run(async () => {
-  $('history-title').textContent = 'บิลล่าสุด 50 รายการ';
+  $('history-title').textContent = 'บิลวันนี้ • ล่าสุด 50 รายการ (เวลาไทย)';
   const sales = await api('sales');
   $('sales').replaceChildren();
   for (const sale of sales) {
@@ -636,24 +637,6 @@ async function showClosedShiftReport(id, automatic = false) {
     $('print').disabled = false;
   }
 }
-$('shift-reports').onclick = run(async () => {
-  const rows = await api('shifts/closed');
-  $('history-title').textContent = 'สรุปกะที่ปิดแล้ว';
-  $('sales').replaceChildren();
-  if (!rows.length) $('sales').append(text('p', 'ยังไม่มีกะที่ปิดแล้ว'));
-  for (const row of rows) {
-    const button = text(
-      'button',
-      `กะ ${row.businessDate} • ปิด ${new Date(row.closedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`,
-    );
-    button.onclick = run(async () => {
-      $('history-dialog').close();
-      await showClosedShiftReport(row.id);
-    });
-    $('sales').append(button);
-  }
-  $('history-dialog').showModal();
-});
 async function refreshShift() {
   const state = await api('shift');
   shift = state.shift;
@@ -732,35 +715,24 @@ $('close-form').onsubmit = run(async (event) => {
   }
 });
 async function report() {
-  const result = await api(`reports/daily?date=${encodeURIComponent($('report-date').value)}`);
+  const result = await refreshShift();
   $('report-content').replaceChildren(
-    text('p', `จำนวนบิล ${result.summary.billCount}`),
-    text('p', `ยอดขายเงินสด ${money(result.summary.cashSatang)}`),
-    text('p', `ยอดโอน ${money(result.summary.transferSatang)}`),
-    text('h3', `รายรับรวม ${money(result.summary.totalSatang)}`),
-    text('p', 'ยอดขายนับตามเวลาชำระ 00:00–24:00 เวลาไทย ไม่รวมเงินสดตั้งต้น'),
+    ...(result.shift ? [
+      text('p', 'จำนวนบิล ' + result.summary.billCount),
+      text('p', 'เงินสดตั้งต้น ' + money(result.shift.openingCashSatang)),
+      text('p', 'ยอดขายเงินสด ' + money(result.summary.cashSatang)),
+      text('p', 'ยอดโอน ' + money(result.summary.transferSatang)),
+      text('h3', 'รายรับกะปัจจุบัน ' + money(result.summary.totalSatang)),
+    ] : [text('p', 'ยังไม่มีกะที่เปิดอยู่')]),
   );
-  for (const row of result.shifts)
-    $('report-content').append(
-      text(
-        'p',
-        row.closedAt
-          ? `รอบ ${row.id.slice(0, 8)} ปิดแล้ว • เงินสดที่ควรมี ${money(row.expectedCashSatang)} • นับจริง ${money(row.countedCashSatang)} • ขาด/เกิน ${money(row.cashDifferenceSatang)}`
-          : `รอบ ${row.id.slice(0, 8)} ยังเปิดอยู่`,
-      ),
-    );
 }
 $('daily-report').onclick = run(async () => {
-  $('report-date').value = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Bangkok',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
+
+  const heading = $('report-dialog').querySelector('h2');
+  if (heading) heading.textContent = 'กะปัจจุบัน';
   await report();
   $('report-dialog').showModal();
 });
-$('report-form').onsubmit = run(report);
 $('close-report').onclick = () => $('report-dialog').close();
 for (const id of ['open-dialog', 'close-dialog', 'report-dialog', 'member-dialog']) {
   const message = text('p', '', 'dialog-notice');

@@ -218,6 +218,11 @@ app.whenReady().then(async () => {
     };
     await win.loadURL(`${base}/pos/`);
     await wait('document.querySelector(".product") !== null');
+    assert.equal(await js('document.getElementById("shift-reports") === null && document.getElementById("report-date") === null'), true);
+    await js('document.getElementById("daily-report").click()');
+    await wait('document.getElementById("report-dialog").open');
+    assert.ok((await js('document.getElementById("report-content").textContent')).includes('รายรับกะปัจจุบัน'));
+    await js('document.getElementById("close-report").click()');
     for (const [width, height] of [[1280, 800], [1024, 700], [768, 1024]]) {
       win.setContentSize(width, height);
       await js('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
@@ -354,14 +359,14 @@ app.whenReady().then(async () => {
     await wait('!document.getElementById("print").disabled');
     assert.equal(writes.length, 9);
     await js(
-      'document.getElementById("close-receipt").click();document.getElementById("shift-reports").click()',
+      'document.getElementById("close-receipt").click();document.getElementById("history").click()',
     );
     await wait(
       'document.getElementById("history-dialog").open && document.querySelector("#sales button") !== null',
     );
     await js('document.querySelector("#sales button").click()');
     await wait(
-      'document.getElementById("receipt-dialog").open && document.getElementById("receipt").textContent.includes("ใบสรุปรายได้ปิดกะ")',
+      'document.getElementById("receipt-dialog").open && document.getElementById("receipt").textContent.includes("ใบเสร็จรับเงิน")',
     );
     await js('document.getElementById("print").click()');
     await wait('!document.getElementById("print").disabled');
@@ -369,7 +374,7 @@ app.whenReady().then(async () => {
     assert.equal(closeRequests, 1);
     assert.equal(writes.filter((bytes) => bytes.equals(drawerPulse())).length, 2);
     console.log(
-      'PASS: POS hardware, cash/transfer checkout, close-shift report, print failure recovery and shift-history reprint without duplicate close/drawer. No real sales or hardware used.',
+      'PASS: POS hardware, cash/transfer checkout, close-shift report, print failure recovery and today-receipt reprint without duplicate close/drawer. No real sales or hardware used.',
     );
     app.exit(0);
   } catch (error) {

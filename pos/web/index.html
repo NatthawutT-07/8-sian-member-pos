@@ -16,8 +16,8 @@
     <header>
       <div><strong>8 เซียน</strong><span>POINT OF SALE</span></div>
       <nav>
-        <span id="operator"></span><button id="daily-report">สรุปรายวัน</button
-        ><button id="history">บิลล่าสุด</button><button id="shift-reports" hidden>สรุปกะ</button
+        <span id="operator"></span><button id="daily-report">กะปัจจุบัน</button
+        ><button id="history">บิลวันนี้</button
         ><button id="hardware" hidden>อุปกรณ์</button
         ><button id="tables" hidden>โต๊ะ / ออเดอร์อาหาร</button
         ><button id="logout">ออกจากระบบ</button>
@@ -236,10 +236,6 @@
     </dialog>
     <dialog id="report-dialog">
       <h2>สรุปรายรับต่อวัน</h2>
-      <form id="report-form">
-        <label>วันที่ (เวลาไทย)<input id="report-date" type="date" required /></label
-        ><button>ดูสรุป</button>
-      </form>
       <div id="report-content"></div>
       <button id="close-report">ปิด</button>
     </dialog>
