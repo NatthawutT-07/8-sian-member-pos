@@ -59,7 +59,9 @@ app.whenReady().then(async () => {
     api.get('/api/pos/products', (_, res) => res.json([product]));
     const table = { id: 'table-test', number: 8, sessionId: 'round-test', orderingEnabled: true, zones: ['อาหาร'] };
     let tableCloses = 0, failOrders = true;
-    api.get('/api/pos/tables', (_, res) => res.json([table]));
+    api.get('/api/pos/tables', (_, res) => res.json([table,
+      { id: 'table-free', number: 9, sessionId: null, orderingEnabled: false, zones: [] },
+    ]));
     api.get('/api/pos/table-orders', (_, res) => failOrders
       ? res.status(503).json({ message: 'โหลดออเดอร์ไม่สำเร็จ (ทดสอบ)' }) : res.json([]));
     api.post('/api/pos/tables/:id/close', (req, res) => {
@@ -214,6 +216,20 @@ app.whenReady().then(async () => {
     await wait('document.querySelector(".product") !== null');
     await js('window.confirm = () => { throw new Error("Native confirm unavailable in WebView"); }; document.getElementById("tables").click()');
     await wait('document.getElementById("tables-dialog").open && document.querySelector("#table-list button") !== null && document.querySelector("#tables-dialog [data-dialog-notice]").textContent.includes("โหลดออเดอร์")');
+    const cards = await js(`Array.from(document.querySelectorAll('#table-list .dining-table')).map(el => {
+      const box = el.getBoundingClientRect();
+      return { width: box.width, height: box.height, color: getComputedStyle(el).backgroundColor, text: el.textContent };
+    })`);
+    assert.equal(cards.length, 2);
+    assert.ok(Math.abs(cards[0].width - cards[0].height) < 1);
+    assert.ok(Math.abs(cards[0].height - cards[1].height) < 1);
+    assert.notEqual(cards[0].color, cards[1].color);
+    assert.ok(cards[0].text.includes('ไม่ว่าง') && cards[1].text.includes('ว่าง'));
+    const tablePreview = path.resolve(__dirname, '../../.tmp/pos-hardware/table-grid.png');
+    fs.mkdirSync(path.dirname(tablePreview), { recursive: true });
+    await win.webContents.capturePage(undefined, { stayHidden: true });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    fs.writeFileSync(tablePreview, (await win.webContents.capturePage(undefined, { stayHidden: true })).toPNG());
     await js('document.querySelector("#table-list button").click()');
     await wait('document.getElementById("confirm-action-dialog")?.open');
     await js('document.getElementById("cancel-action").click()');
@@ -223,7 +239,7 @@ app.whenReady().then(async () => {
     await js('document.querySelector("#table-list button").click()');
     await wait('document.getElementById("confirm-action-dialog")?.open');
     await js('document.getElementById("confirm-action").click()');
-    await wait('document.getElementById("table-list").textContent.includes("ปิดสั่งอาหาร") && !document.querySelector("#table-list button")');
+    await wait('document.querySelectorAll("#table-list .table-vacant").length === 2 && !document.querySelector("#table-list button")');
     assert.equal(tableCloses, 1);
     await js('document.getElementById("close-tables").click()');
     await js('document.getElementById("hardware").click()');

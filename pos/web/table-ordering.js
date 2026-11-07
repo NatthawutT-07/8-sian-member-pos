@@ -34,16 +34,17 @@ export function setupTableOrdering({ api, run, editable, getPending }) {
       $('table-list').replaceChildren();
       for (const table of tables) {
         const row = text('div', '');
-        row.className = 'table-card';
-        row.append(
-          text(
-            'strong',
-            `โต๊ะ ${table.number} • ${table.sessionId ? (table.orderingEnabled ? 'เปิดสั่งอาหาร' : 'ชำระแล้ว • รอเลือกโซน') : 'ปิดสั่งอาหาร'}`,
-          ),
-        );
+        row.className = `table-card dining-table ${table.sessionId ? 'table-occupied' : 'table-vacant'}`;
+        row.dataset.tableId = table.id;
+        const heading = text('strong', `โต๊ะ ${table.number}`);
+        heading.className = 'table-number';
+        const status = text('span', table.sessionId ? 'ไม่ว่าง' : 'ว่าง');
+        status.className = 'table-state';
+        row.append(heading, status);
         if (table.sessionId) {
           if (!table.orderingEnabled) {
             const activate = text('button', 'เลือกโซน / เปิดโต๊ะ');
+            activate.className = 'table-activate';
             activate.onclick = run(() =>
               configure({
                 tableId: table.id,
@@ -52,9 +53,13 @@ export function setupTableOrdering({ api, run, editable, getPending }) {
               }),
             );
             row.append(activate);
-          } else
-            row.append(text('p', `โซนที่เปิด: ${table.zones.join(', ') || 'ไม่เปิดโซนอาหาร'}`));
-          const button = text('button', 'ลูกค้าออกแล้ว / ปิดสั่งอาหาร');
+          } else {
+            const zones = text('p', `โซน: ${table.zones.join(', ') || 'ไม่เปิดโซนอาหาร'}`);
+            zones.className = 'table-zones';
+            row.append(zones);
+          }
+          const button = text('button', 'ปิดโต๊ะ');
+          button.className = 'table-close';
           button.onclick = run(async () => {
             if (
               !(await confirmAction(
