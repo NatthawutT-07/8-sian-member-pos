@@ -1,4 +1,5 @@
 import { renderKitchenTicket } from './kitchen-ticket.js';
+import { confirmAction } from './confirm-action.js';
 
 export function setupKitchen({ api, run, notice }) {
   const $ = (id) => document.getElementById(id);
@@ -56,6 +57,28 @@ export function setupKitchen({ api, run, notice }) {
         working = false;
       }
     });
+  const cancelOrder = (order, item) => run(async () => {
+    if (working) return;
+    working = true;
+    try {
+      const message = item
+        ? `ยกเลิก ${item.name} × ${item.quantity} ของโต๊ะ ${order.table.number}?`
+        : `ยกเลิกทั้งใบออเดอร์ของโต๊ะ ${order.table.number}?`;
+      if (!(await confirmAction(message, { title: 'ยืนยันยกเลิกอาหาร', confirmText: 'ยืนยันยกเลิก' }))) return;
+      await api(`kitchen/orders/${order.id}/cancel`, {
+        sessionId: order.sessionId,
+        ...(item ? { menuItemId: item.menuItemId } : {}),
+      });
+      if (currentTicket?.id === order.id) {
+        currentTicket = null;
+        $('kitchen-ticket-dialog').close();
+      }
+      notice(item ? 'ยกเลิกรายการอาหารแล้ว' : 'ยกเลิกออเดอร์ทั้งใบแล้ว');
+    } finally {
+      working = false;
+      await refresh();
+    }
+  });
   async function refresh() {
     if (!active || loading || working) return;
     loading = true;
@@ -107,6 +130,10 @@ export function setupKitchen({ api, run, notice }) {
         for (const item of order.items) {
           const row = el('div', '', 'kitchen-order-item');
           row.append(el('span', item.name), el('strong', `× ${item.quantity}`));
+          const remove = el('button', 'ยกเลิก', 'kitchen-cancel-item');
+          remove.setAttribute('aria-label', `ยกเลิก ${item.name} โต๊ะ ${order.table.number}`);
+          remove.onclick = cancelOrder(order, item);
+          row.append(remove);
           card.append(row);
         }
         const actions = el('div', '', 'kitchen-order-actions');
@@ -128,7 +155,9 @@ export function setupKitchen({ api, run, notice }) {
             await refresh();
           }
         });
-        actions.append(total, print, done);
+        const cancel = el('button', 'ยกเลิกทั้งใบ', 'kitchen-cancel-order');
+        cancel.onclick = cancelOrder(order);
+        actions.append(total, print, cancel, done);
         card.append(actions);
         $('kitchen-orders').append(card);
       }

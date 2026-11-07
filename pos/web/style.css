@@ -1215,6 +1215,25 @@ body.kitchen-active #operator {
   display: flex;
   gap: 8px;
 }
+.kitchen-order-item > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.kitchen-order-item > strong {
+  white-space: nowrap;
+}
+.kitchen-cancel-item,
+.kitchen-cancel-order {
+  color: #8d2521;
+  border-color: #d35049;
+  background: #fff0ef;
+}
+.kitchen-cancel-item {
+  font-size: 12px;
+  padding: 5px 9px;
+  flex-shrink: 0;
+}
 @media (max-width: 600px) {
   #kitchen {
     padding: 14px;

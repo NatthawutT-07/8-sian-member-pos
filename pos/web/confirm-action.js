@@ -1,11 +1,11 @@
 // Use an HTML dialog: Android WebView does not provide window.confirm by default.
-export function confirmAction(message) {
+export function confirmAction(message, { title: heading = 'ยืนยันปิดโต๊ะ', confirmText = 'ยืนยันปิดโต๊ะ' } = {}) {
   return new Promise((resolve) => {
     const dialog = document.createElement('dialog');
     dialog.id = 'confirm-action-dialog';
     const title = document.createElement('h2');
     title.id = 'confirm-action-title';
-    title.textContent = 'ยืนยันปิดโต๊ะ';
+    title.textContent = heading;
     dialog.setAttribute('aria-labelledby', title.id);
     const description = document.createElement('p');
     description.textContent = message;
@@ -15,7 +15,7 @@ export function confirmAction(message) {
     cancel.id = 'cancel-action';
     const confirm = document.createElement('button');
     confirm.type = 'button';
-    confirm.textContent = 'ยืนยันปิดโต๊ะ';
+    confirm.textContent = confirmText;
     confirm.id = 'confirm-action';
     confirm.className = 'primary';
     cancel.onclick = () => dialog.close('cancel');
