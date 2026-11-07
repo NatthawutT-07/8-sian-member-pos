@@ -1079,38 +1079,50 @@ body.kitchen-active #operator {
 #kitchen {
   max-width: 1500px;
   margin: auto;
-  padding: 24px;
+  padding: 18px;
+}
+body.kitchen-active > header button,
+#kitchen-summary-dialog button,
+#kitchen-ticket-dialog button,
+#kitchen button,
+#kitchen select {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 7px;
 }
 .kitchen-toolbar,
 .kitchen-table-tools {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 .kitchen-toolbar h1 {
   margin: 4px 0;
+  font-size: 24px;
 }
 #kitchen-status {
-  margin-bottom: 0;
+  margin: 6px 0 0;
+  font-size: 13px;
 }
 .kitchen-table-tools select {
-  max-width: 360px;
+  max-width: 300px;
 }
 #kitchen-orders {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 340px));
+  gap: 12px;
   align-items: start;
 }
 .kitchen-order {
-  padding: 18px;
+  padding: 12px;
   background: #fff;
   border: 1px solid #d5ddd3;
-  border-top: 5px solid #c59445;
-  border-radius: 12px;
+  border-top: 4px solid #c59445;
+  border-radius: 10px;
 }
 .kitchen-order-heading {
   display: flex;
@@ -1121,18 +1133,23 @@ body.kitchen-active #operator {
 }
 .kitchen-order h2 {
   margin: 0;
-  font-size: 25px;
+  font-size: 22px;
+}
+.kitchen-order > .hint {
+  font-size: 11px;
+  margin: 6px 0 8px;
 }
 .kitchen-order-heading span {
-  font-size: 13px;
+  font-size: 11px;
   color: #58685c;
 }
 .kitchen-order-item {
   display: flex;
   justify-content: space-between;
-  gap: 14px;
-  padding: 7px 0;
-  font-size: 20px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 16px;
   border-bottom: 1px solid #edf0e8;
 }
 .kitchen-order-item span {
@@ -1145,11 +1162,11 @@ body.kitchen-active #operator {
 .kitchen-order-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 6px;
+  margin-top: 10px;
 }
 .kitchen-order-actions .primary {
-  grid-column: 1 / -1;
+  grid-column: auto;
 }
 .kitchen-empty {
   padding: 40px 0;
@@ -1233,6 +1250,11 @@ body.kitchen-active #operator {
   font-size: 12px;
   padding: 5px 9px;
   flex-shrink: 0;
+}
+#kitchen .kitchen-cancel-item {
+  min-height: 28px;
+  padding: 3px 7px;
+  font-size: 11px;
 }
 @media (max-width: 600px) {
   #kitchen {
