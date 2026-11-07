@@ -6,13 +6,7 @@ export function renderKitchenTicket(root, ticket) {
     return el;
   };
   root.classList.add('kitchen-ticket');
-  root.replaceChildren(
-    line('h2', `โต๊ะ ${ticket.tableNumber}`),
-    line(
-      'p',
-      `ออเดอร์ ${ticket.id.slice(-8)} • ${new Date(ticket.createdAt).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hour12: false })}`,
-    ),
-  );
+  root.replaceChildren(line('h2', `โต๊ะ ${ticket.tableNumber}`));
   const list = doc.createElement('div');
   for (const item of ticket.items) {
     const row = doc.createElement('div');
