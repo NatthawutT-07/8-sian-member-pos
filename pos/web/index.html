@@ -9,6 +9,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>8 เซียน POS</title>
     <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./cashier-layout.css" />
     <script src="./app.js" type="module"></script>
   </head>
   <body>
@@ -169,15 +170,25 @@
       </form>
     </dialog>
     <dialog id="tables-dialog" aria-labelledby="tables-title">
-      <h2 id="tables-title">โต๊ะและรายการสั่งอาหาร</h2>
-      <button id="refresh-tables">โหลดข้อมูลใหม่</button
-      ><button id="close-tables">ปิดหน้าต่าง</button>
+      <div class="tables-header">
+        <h2 id="tables-title">โต๊ะและรายการสั่งอาหาร</h2>
+        <div class="tables-toolbar">
+          <button id="refresh-tables">โหลดข้อมูลใหม่</button>
+          <button id="close-tables">ปิดหน้าต่าง</button>
+        </div>
+      </div>
       <p id="ordering-status" role="status"></p>
       <p data-dialog-notice role="alert"></p>
-      <h3>สถานะโต๊ะ</h3>
-      <div id="table-list"></div>
-      <h3>รายการอาหารรอดำเนินการ</h3>
-      <div id="table-orders"></div>
+      <div class="tables-content">
+        <section class="tables-panel" aria-labelledby="table-state-title">
+          <h3 id="table-state-title">สถานะโต๊ะ</h3>
+          <div id="table-list"></div>
+        </section>
+        <section class="table-orders-panel" aria-labelledby="table-orders-title">
+          <h3 id="table-orders-title">รายการอาหารรอดำเนินการ</h3>
+          <div id="table-orders"></div>
+        </section>
+      </div>
     </dialog>
     <dialog id="member-dialog" aria-labelledby="member-dialog-title">
       <h2 id="member-dialog-title">ยืนยันสมาชิกของบิลนี้</h2>

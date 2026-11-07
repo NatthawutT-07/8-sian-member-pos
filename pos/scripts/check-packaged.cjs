@@ -15,6 +15,7 @@ app.whenReady().then(async () => {
       'web/index.html',
       'web/app.js',
       'web/hardware-ui.js',
+      'web/cashier-layout.css',
       'desktop/api-client.cjs',
       'desktop/preload.cjs',
     ])

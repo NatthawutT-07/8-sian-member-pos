@@ -60,10 +60,14 @@ app.whenReady().then(async () => {
     const table = { id: 'table-test', number: 8, sessionId: 'round-test', orderingEnabled: true, zones: ['อาหาร'] };
     let tableCloses = 0, failOrders = true;
     api.get('/api/pos/tables', (_, res) => res.json([table,
-      { id: 'table-free', number: 9, sessionId: null, orderingEnabled: false, zones: [] },
+      ...Array.from({ length: 9 }, (_, index) => ({ id: `table-free-${index}`, number: index + 9, sessionId: null, orderingEnabled: false, zones: [] })),
     ]));
     api.get('/api/pos/table-orders', (_, res) => failOrders
-      ? res.status(503).json({ message: 'โหลดออเดอร์ไม่สำเร็จ (ทดสอบ)' }) : res.json([]));
+      ? res.status(503).json({ message: 'โหลดออเดอร์ไม่สำเร็จ (ทดสอบ)' }) : res.json(table.sessionId ? [{
+        id: 'food-test', tableId: table.id, sessionId: table.sessionId,
+        table: { number: table.number, sessionId: table.sessionId }, createdAt: new Date().toISOString(),
+        items: [{ name: 'กุ้งสด', quantity: 4 }, { name: 'ไก่ป๊อป', quantity: 2 }],
+      }] : []));
     api.post('/api/pos/tables/:id/close', (req, res) => {
       assert.equal(user.role, 'USER');
       assert.equal(req.params.id, table.id);
@@ -214,13 +218,30 @@ app.whenReady().then(async () => {
     };
     await win.loadURL(`${base}/pos/`);
     await wait('document.querySelector(".product") !== null');
+    for (const [width, height] of [[1280, 800], [1024, 700], [768, 1024]]) {
+      win.setContentSize(width, height);
+      await js('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+      const layout = await js(`(() => {
+        const pay = document.getElementById('pay').getBoundingClientRect();
+        return { overflow: document.documentElement.scrollWidth > innerWidth,
+          payRight: pay.right, payBottom: pay.bottom, width: innerWidth, height: innerHeight };
+      })()`);
+      assert.equal(layout.overflow, false, `Horizontal overflow at ${width}`);
+      assert.ok(layout.payRight <= layout.width && layout.payBottom <= layout.height, `Checkout offscreen at ${width}x${height}`);
+    }
+    win.setContentSize(1280, 800);
+    fs.mkdirSync(path.resolve(__dirname, '../../.tmp/pos-hardware'), { recursive: true });
+    await win.webContents.capturePage(undefined, { stayHidden: true });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    fs.writeFileSync(path.resolve(__dirname, '../../.tmp/pos-hardware/cashier-layout.png'),
+      (await win.webContents.capturePage(undefined, { stayHidden: true })).toPNG());
     await js('window.confirm = () => { throw new Error("Native confirm unavailable in WebView"); }; document.getElementById("tables").click()');
     await wait('document.getElementById("tables-dialog").open && document.querySelector("#table-list button") !== null && document.querySelector("#tables-dialog [data-dialog-notice]").textContent.includes("โหลดออเดอร์")');
     const cards = await js(`Array.from(document.querySelectorAll('#table-list .dining-table')).map(el => {
       const box = el.getBoundingClientRect();
       return { width: box.width, height: box.height, color: getComputedStyle(el).backgroundColor, text: el.textContent };
     })`);
-    assert.equal(cards.length, 2);
+    assert.equal(cards.length, 10);
     assert.ok(Math.abs(cards[0].width - cards[0].height) < 1);
     assert.ok(Math.abs(cards[0].height - cards[1].height) < 1);
     assert.notEqual(cards[0].color, cards[1].color);
@@ -236,10 +257,15 @@ app.whenReady().then(async () => {
     await wait('!document.getElementById("confirm-action-dialog")');
     assert.equal(tableCloses, 0);
     failOrders = false;
+    await js('document.getElementById("refresh-tables").click()');
+    await wait('document.querySelector("#table-orders .table-card") !== null');
+    await win.webContents.capturePage(undefined, { stayHidden: true });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    fs.writeFileSync(tablePreview, (await win.webContents.capturePage(undefined, { stayHidden: true })).toPNG());
     await js('document.querySelector("#table-list button").click()');
     await wait('document.getElementById("confirm-action-dialog")?.open');
     await js('document.getElementById("confirm-action").click()');
-    await wait('document.querySelectorAll("#table-list .table-vacant").length === 2 && !document.querySelector("#table-list button")');
+    await wait('document.querySelectorAll("#table-list .table-vacant").length === 10 && !document.querySelector("#table-list button")');
     assert.equal(tableCloses, 1);
     await js('document.getElementById("close-tables").click()');
     await js('document.getElementById("hardware").click()');
