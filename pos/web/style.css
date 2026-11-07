@@ -972,7 +972,8 @@ dialog::backdrop {
   margin: 16px 0;
 }
 #table-list {
-  grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(0, 128px));
+  gap: 8px;
   align-items: start;
 }
 #table-list .dining-table {
@@ -985,8 +986,8 @@ dialog::backdrop {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 6px;
-  padding: 12px;
+  gap: 3px;
+  padding: 8px;
   border-width: 2px;
 }
 #table-list .table-vacant {
@@ -1000,15 +1001,15 @@ dialog::backdrop {
   color: #8d2521;
 }
 .dining-table .table-number {
-  font-size: 24px;
+  font-size: 19px;
   line-height: 1.2;
 }
 .dining-table .table-state {
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 700;
 }
 .dining-table .table-zones {
-  font-size: 12px;
+  font-size: 10px;
   line-height: 1.3;
   max-height: 2.6em;
   overflow: auto;
@@ -1018,9 +1019,9 @@ dialog::backdrop {
 }
 .dining-table .table-close,
 .dining-table .table-activate {
-  font-size: 13px;
-  padding: 6px 12px;
-  min-height: 36px;
+  font-size: 11px;
+  padding: 3px 8px;
+  min-height: 28px;
   flex-shrink: 0;
 }
 .dining-table .table-close {
