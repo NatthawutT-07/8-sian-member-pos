@@ -314,9 +314,21 @@ for (const button of document.querySelectorAll('[data-group]'))
     renderProducts();
   };
 $('scan-form').onsubmit = run(async () => {
-  if (scanning || !editable()) return;
+  if (scanning) return;
   const code = $('scan').value.trim();
   if (!code) return;
+  if (/^8SR-[a-zA-Z0-9-]{1,100}$/.test(code)) {
+    scanning = true;
+    try {
+      const sale = await api(`sales/${code.slice(4)}`);
+      $('scan').value = '';
+      receipt(sale);
+    } finally {
+      scanning = false;
+    }
+    return;
+  }
+  if (!editable()) return;
   if (/^88\d{30}$/.test(code)) {
     $('scan').value = '';
     await applyCoupon(code);

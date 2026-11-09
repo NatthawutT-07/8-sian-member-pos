@@ -1,3 +1,5 @@
+import { renderReceiptQr } from './receipt-qr.js';
+
 const money = (n) =>
   (n / 100).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -94,4 +96,6 @@ export function renderReceipt(root, sale) {
   time.dateTime = new Date(sale.createdAt).toISOString();
   footer.append(time);
   root.append(footer);
+  const qr = renderReceiptQr(doc, sale);
+  if (qr) root.append(qr);
 }

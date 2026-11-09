@@ -386,6 +386,22 @@ dialog::backdrop {
   padding-top: 6px;
   text-align: center;
 }
+.receipt-qr {
+  text-align: center;
+  break-inside: avoid;
+  margin-top: 12px;
+  padding-bottom: 8px;
+  background: #fff;
+  color: #000;
+}
+.receipt-qr svg {
+  display: block;
+  margin: 0 auto;
+}
+.receipt-qr p {
+  font-size: 10px;
+  margin: 2px 0;
+}
 .receipt-thanks {
   font-weight: bold;
   margin: 0 0 3px;
