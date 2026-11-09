@@ -129,13 +129,22 @@ export function setupTableOrdering({ api, run, editable, getPending }) {
       input.type = 'checkbox';
       input.value = zone;
       input.name = 'zone';
-      label.append(input, document.createTextNode(zone));
+      label.append(input, text('span', zone));
       $('zone-options').append(label);
     }
     if (!zones.length)
       $('zone-options').append(text('p', 'ยังไม่มีโซนอาหาร ตั้งค่าโซนได้ผ่านเว็บแอดมิน'));
+    updateSelection();
     $('zone-dialog').showModal();
   }
+  function updateSelection() {
+    const count = $('zone-options').querySelectorAll('input:checked').length;
+    $('zone-selection').textContent = count
+      ? `เลือกแล้ว ${count} โซน`
+      : 'ยังไม่เลือกโซน • หากยืนยัน โต๊ะจะไม่มีเมนูอาหารให้สั่ง';
+    $('zone-selection').classList.toggle('zone-selection-empty', count === 0);
+  }
+  $('zone-options').onchange = updateSelection;
   $('zone-form').onsubmit = run(async () => {
     if (!configuring) return;
     $('activate-table').disabled = true;

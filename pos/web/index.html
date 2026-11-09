@@ -17,8 +17,7 @@
       <div><strong>8 เซียน</strong><span>POINT OF SALE</span></div>
       <nav>
         <span id="operator"></span><button id="daily-report">กะปัจจุบัน</button
-        ><button id="history">บิลวันนี้</button
-        ><button id="hardware" hidden>อุปกรณ์</button
+        ><button id="history">บิลวันนี้</button><button id="hardware" hidden>อุปกรณ์</button
         ><button id="tables" hidden>โต๊ะ / ออเดอร์อาหาร</button
         ><button id="logout">ออกจากระบบ</button>
       </nav>
@@ -160,13 +159,20 @@
     </main>
     <dialog id="zone-dialog" aria-labelledby="zone-title">
       <form id="zone-form">
-        <h2 id="zone-title">เลือกสิทธิ์โซนก่อนเปิดโต๊ะ</h2>
-        <p id="zone-table"></p>
-        <p>เลือกได้หลายโซน หรือไม่เลือกเลยก็ได้ หากไม่เลือกจะไม่มีอาหารให้สั่ง</p>
-        <div id="zone-options"></div>
+        <div class="zone-heading">
+          <span class="zone-step">เปิดสั่งอาหาร</span>
+          <h2 id="zone-title">เลือกโซนอาหารของโต๊ะ</h2>
+          <p id="zone-table"></p>
+        </div>
+        <p class="zone-description">เลือกโซนที่ลูกค้าสั่งได้ สามารถเลือกได้มากกว่า 1 โซน</p>
+        <div id="zone-options" role="group" aria-label="โซนอาหารที่อนุญาต"></div>
+        <p id="zone-selection" aria-live="polite"></p>
         <p data-dialog-notice role="status"></p>
-        <button id="activate-table" class="primary">ยืนยันสิทธิ์และเปิดโต๊ะ</button>
-        <button type="button" id="later-zones">ไว้ภายหลัง (โต๊ะยังสั่งไม่ได้)</button>
+        <div class="zone-actions">
+          <button type="button" id="later-zones">เลือกภายหลัง</button>
+          <button id="activate-table" class="primary">ยืนยันและเปิดโต๊ะ</button>
+        </div>
+        <p class="zone-later-hint">เลือกภายหลัง: โต๊ะจะยังสั่งอาหารไม่ได้</p>
       </form>
     </dialog>
     <dialog id="tables-dialog" aria-labelledby="tables-title">

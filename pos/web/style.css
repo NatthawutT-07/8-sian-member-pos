@@ -1057,22 +1057,145 @@ dialog::backdrop {
 .table-card p {
   margin: 0;
 }
+#zone-dialog {
+  width: min(94vw, 520px);
+  padding: 24px;
+  color: #26342e;
+}
+#zone-form {
+  margin: 0;
+}
+.zone-step {
+  color: #527563;
+  font-size: 12px;
+  font-weight: 600;
+}
+#zone-dialog h2 {
+  margin: 6px 0 10px;
+  font-size: 22px;
+  line-height: 1.4;
+}
+#zone-table {
+  display: inline-block;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: #edf5ef;
+  color: #1c6349;
+  font-size: 13px;
+  font-weight: 600;
+}
+#zone-dialog .zone-description {
+  margin: 18px 0 12px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #68766c;
+}
 #zone-options {
   display: grid;
-  gap: 12px;
-  margin: 20px 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  max-height: 36dvh;
+  overflow-y: auto;
+  padding: 2px;
 }
 #zone-options label {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid #d8cebd;
-  border-radius: 8px;
+  gap: 10px;
+  margin: 0;
+  min-height: 58px;
+  padding: 12px 14px;
+  border: 1px solid #d5ddd3;
+  border-radius: 10px;
+  cursor: pointer;
+  background: #fff;
+  font-size: 15px;
+  line-height: 1.5;
+}
+#zone-options label span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#zone-options label:has(input:checked) {
+  background: #edf6f0;
+  border-color: #26805e;
+  color: #17583f;
+}
+#zone-options label:focus-within {
+  outline: 2px solid #26805e;
+  outline-offset: 1px;
+}
+#zone-options > p {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  line-height: 1.7;
+}
+#zone-selection {
+  margin: 12px 0 18px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #226348;
+}
+#zone-selection.zone-selection-empty {
+  color: #896330;
+}
+#zone-dialog [data-dialog-notice]:empty {
+  display: none;
+}
+#zone-dialog [data-dialog-notice] {
+  color: #a33c25;
+  font-size: 13px;
+}
+.zone-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 10px;
+  border-top: 1px solid #e4e9e1;
+  padding-top: 16px;
+}
+#zone-dialog .zone-actions button {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+#zone-dialog .zone-actions .primary {
+  grid-column: auto;
+  font-weight: 600;
+}
+#zone-dialog .zone-later-hint {
+  margin: 10px 0 0;
+  font-size: 11px;
+  color: #7a847c;
+  line-height: 1.6;
+  text-align: center;
+}
+@media (max-width: 420px) {
+  #zone-dialog {
+    padding: 18px;
+  }
+  #zone-dialog h2 {
+    font-size: 20px;
+  }
+  #zone-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .zone-actions {
+    grid-template-columns: 1fr 1.25fr;
+  }
 }
 #zone-options input {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: #1d684c;
 }
 
 body.kitchen-active {
