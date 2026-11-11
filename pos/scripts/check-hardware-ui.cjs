@@ -58,16 +58,22 @@ app.whenReady().then(async () => {
     api.get('/api/pos/me', (_, res) => res.json(user));
     api.get('/api/pos/products', (_, res) => res.json([product]));
     api.get('/api/pos/ordering-zones', (_, res) => res.json(['หมูกระทะ', 'ทะเล']));
-    api.post('/api/pos/tables/:id/qr', (req, res) => res.json({
-      tableNumber: 9, sessionId: req.body.sessionId,
-      url: `${base}/order/current-round`, qrExpiresAt: new Date(Date.now() + 7200000).toISOString(),
-    }));
+    api.post('/api/pos/tables/:id/qr', (req, res) =>
+      res.json({
+        tableNumber: 9,
+        sessionId: req.body.sessionId,
+        url: `${base}/order/current-round`,
+        qrExpiresAt: new Date(Date.now() + 7200000).toISOString(),
+      }),
+    );
     const table = {
       id: 'table-test',
       number: 8,
       sessionId: 'round-test',
       orderingEnabled: true,
       zones: ['อาหาร'],
+      openedAt: new Date(Date.now() - 7200000).toISOString(),
+      qrExpiresAt: new Date(Date.now() + 7200000).toISOString(),
     };
     let tableCloses = 0,
       failOrders = true;
@@ -309,10 +315,29 @@ app.whenReady().then(async () => {
       return { width: box.width, height: box.height, color: getComputedStyle(el).backgroundColor, text: el.textContent };
     })`);
     assert.equal(cards.length, 10);
-    assert.ok(Math.abs(cards[0].width - cards[0].height) < 1);
-    assert.ok(Math.abs(cards[0].height - cards[1].height) < 1);
+    assert.ok(cards[0].width >= 200);
     assert.notEqual(cards[0].color, cards[1].color);
-    assert.ok(cards[0].text.includes('ไม่ว่าง') && cards[1].text.includes('ว่าง'));
+    assert.ok(cards[0].text.includes('เปิดสั่งอาหาร') && cards[1].text.includes('ว่าง'));
+    assert.ok(
+      cards[0].text.includes('เริ่มรอบโต๊ะ') &&
+        cards[0].text.includes('สิ้นสุดสั่งอาหาร') &&
+        cards[0].text.includes('เวลาคงเหลือ'),
+    );
+    // Refresh once with a nearly expired deadline, then wait for the local clock tick.
+    table.qrExpiresAt = new Date(Date.now() + 1500).toISOString();
+    await js('document.getElementById("refresh-tables").click()');
+    await wait('!!document.querySelector("#table-list .table-expired")');
+    assert.equal(
+      await js('document.querySelector(".table-expired .table-time-remaining").textContent'),
+      '00:00:00',
+    );
+    assert.equal(
+      await js('document.querySelector(".table-expired .table-qr-button").disabled'),
+      true,
+    );
+    assert.equal(await js('document.querySelector(".table-expired .table-close").disabled'), false);
+    assert.equal(tableCloses, 0);
+    assert.equal(table.sessionId, 'round-test');
     const tablePreview = path.resolve(__dirname, '../../.tmp/pos-hardware/table-grid.png');
     fs.mkdirSync(path.dirname(tablePreview), { recursive: true });
     await win.webContents.capturePage(undefined, { stayHidden: true });
@@ -379,9 +404,13 @@ app.whenReady().then(async () => {
       'document.getElementById("close-hardware").click();document.getElementById("scan").value="8850123456789";document.getElementById("scan-form").requestSubmit()',
     );
     await wait('document.querySelector(".cart-row") !== null');
-    await js('document.getElementById("table-select").value="table-free-0";document.getElementById("table-select").dispatchEvent(new Event("change"))');
+    await js(
+      'document.getElementById("table-select").value="table-free-0";document.getElementById("table-select").dispatchEvent(new Event("change"))',
+    );
     await wait('document.querySelectorAll("#checkout-zone-options input").length === 2');
-    await js('document.querySelector("#checkout-zone-options input").checked=true;document.getElementById("checkout-print-qr").checked=true');
+    await js(
+      'document.querySelector("#checkout-zone-options input").checked=true;document.getElementById("checkout-print-qr").checked=true',
+    );
     await js(
       'document.getElementById("received").value="300";document.getElementById("received").dispatchEvent(new Event("input"));document.getElementById("pay").click()',
     );
@@ -391,7 +420,12 @@ app.whenReady().then(async () => {
     assert.equal(sales.length, 1);
     assert.deepEqual(sales[0].ordering.zones, ['หมูกระทะ']);
     assert.equal(sales[0].ordering.qrHours, 2);
-    assert.equal(await js('document.getElementById("receipt-print-qr").checked && !!document.querySelector("#receipt .receipt-qr") && !document.getElementById("zone-dialog").open && !document.getElementById("table-qr-dialog").open'), true);
+    assert.equal(
+      await js(
+        'document.getElementById("receipt-print-qr").checked && !!document.querySelector("#receipt .receipt-qr") && !document.getElementById("zone-dialog").open && !document.getElementById("table-qr-dialog").open',
+      ),
+      true,
+    );
     assert.deepEqual(writes[3], drawerPulse());
     assert.equal(writes.length, 5);
     await js('document.getElementById("print").click()');

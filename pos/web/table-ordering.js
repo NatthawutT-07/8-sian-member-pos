@@ -1,4 +1,5 @@
 import { confirmAction } from './confirm-action.js';
+import { tableTiming, tableDateTime } from './table-time.js';
 
 export function setupTableOrdering({
   api,
@@ -16,10 +17,22 @@ export function setupTableOrdering({
   };
   let tables = [],
     timer,
+    clockTimer,
     refreshing = false,
     configuring = null,
     checkoutTable = null,
     checkoutReady = false;
+  const tableClocks = new Map();
+  function updateClocks() {
+    if (!$('tables-dialog').open) return;
+    for (const { table, row, status, remaining, qr } of tableClocks.values()) {
+      const timing = tableTiming(table);
+      row.classList.toggle('table-expired', timing.state === 'expired');
+      status.textContent = timing.label;
+      remaining.textContent = timing.remaining;
+      if (qr) qr.disabled = timing.state !== 'active';
+    }
+  }
   async function loadCheckout() {
     const id = $('table-select').value;
     $('checkout-ordering').hidden = !id;
@@ -72,16 +85,32 @@ export function setupTableOrdering({
     try {
       await refresh();
       $('table-list').replaceChildren();
+      tableClocks.clear();
       for (const table of tables) {
         const row = text('div', '');
         row.className = `table-card dining-table ${table.sessionId ? 'table-occupied' : 'table-vacant'}`;
         row.dataset.tableId = table.id;
         const heading = text('strong', `โต๊ะ ${table.number}`);
         heading.className = 'table-number';
-        const status = text('span', table.sessionId ? 'ไม่ว่าง' : 'ว่าง');
+        const status = text('span', tableTiming(table).label);
         status.className = 'table-state';
         row.append(heading, status);
         if (table.sessionId) {
+          const times = text('dl', '');
+          times.className = 'table-times';
+          const remaining = text('dd', '');
+          remaining.className = 'table-time-remaining';
+          times.append(
+            text('dt', 'เริ่มรอบโต๊ะ'),
+            text('dd', tableDateTime(table.openedAt)),
+            text('dt', 'สิ้นสุดสั่งอาหาร'),
+            text('dd', tableDateTime(table.qrExpiresAt)),
+            text('dt', 'เวลาคงเหลือ'),
+            remaining,
+          );
+          row.append(times);
+          const clock = { table, row, status, remaining, qr: null };
+          tableClocks.set(table.id, clock);
           const actions = text('div', '');
           actions.className = 'table-card-actions';
           if (!table.orderingEnabled) {
@@ -102,6 +131,7 @@ export function setupTableOrdering({
             const qr = text('button', 'QR');
             qr.className = 'table-qr-button';
             qr.title = 'ดู / พิมพ์ QR รอบนี้';
+            clock.qr = qr;
             qr.onclick = run(async () =>
               showQr(
                 await api(`tables/${table.id}/qr`, { sessionId: table.sessionId }),
@@ -133,6 +163,7 @@ export function setupTableOrdering({
         }
         $('table-list').append(row);
       }
+      updateClocks();
       $('table-orders').replaceChildren();
       const orders = await api('table-orders');
       if (!orders.length) $('table-orders').append(text('p', 'ไม่มีรายการรอดำเนินการ'));
@@ -276,9 +307,13 @@ export function setupTableOrdering({
     },
     stop() {
       clearInterval(timer);
+      clearInterval(clockTimer);
+      tableClocks.clear();
     },
     start() {
       clearInterval(timer);
+      clearInterval(clockTimer);
+      clockTimer = setInterval(updateClocks, 1000);
       timer = setInterval(() => {
         if ($('tables-dialog').open) run(render)();
       }, 15000);
