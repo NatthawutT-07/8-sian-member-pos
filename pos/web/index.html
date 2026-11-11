@@ -55,7 +55,11 @@
         <select id="kitchen-table" aria-label="โต๊ะสำหรับดูยอดสั่งสะสม"></select
         ><button id="kitchen-summary">ดูยอดอาหารที่สำเร็จแล้ว</button>
       </div>
-      <section id="kitchen-orders" aria-label="ออเดอร์รอทำ เรียงจากเก่าไปใหม่"></section>
+      <section
+        id="kitchen-orders"
+        tabindex="0"
+        aria-label="ออเดอร์รอทำ เรียงจากเก่าไปใหม่ เลื่อนซ้ายขวาเพื่อดูออเดอร์"
+      ></section>
     </main>
     <dialog id="kitchen-summary-dialog">
       <h2 id="kitchen-summary-title">อาหารที่สำเร็จแล้ว</h2>
@@ -131,6 +135,23 @@
         <div id="cart" role="region" aria-label="รายการสินค้าในบิล" tabindex="0"></div>
         <div class="checkout-footer">
           <div class="total"><span>ยอดชำระ</span><strong id="total">฿0.00</strong></div>
+          <fieldset id="checkout-ordering" hidden>
+            <legend>สิทธิ์สั่งอาหารของโต๊ะ</legend>
+            <p class="hint">เลือกโซนตามรายการที่ลูกค้าซื้อ เลือกได้มากกว่า 1 โซน</p>
+            <div id="checkout-zone-options" role="group" aria-label="โซนอาหารก่อนชำระเงิน"></div>
+            <label
+              >อายุ QR (ชั่วโมง)<input
+                id="checkout-qr-hours"
+                type="number"
+                min="1"
+                max="168"
+                value="2"
+            /></label>
+            <label class="checkout-qr-choice"
+              ><input id="checkout-print-qr" type="checkbox" />พิมพ์ QR สั่งอาหารท้ายใบเสร็จ</label
+            >
+            <p id="checkout-zone-status" class="hint" role="status"></p>
+          </fieldset>
           <fieldset class="payment-methods">
             <legend>วิธีชำระเงิน</legend>
             <div class="payment-buttons">

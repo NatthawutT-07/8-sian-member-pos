@@ -74,7 +74,6 @@ const run = (fn) => async (event) => {
   }
 };
 let currentTableQr = null;
-const autoQrSessions = new Set();
 async function printCurrentTableQr() {
   if (!currentTableQr) return;
   const target = currentTableQr;
@@ -121,15 +120,6 @@ async function showTableQr(qr, automatic, tableId) {
   }
   $('table-qr-notice').textContent = '';
   if (!$('table-qr-dialog').open) $('table-qr-dialog').showModal();
-  if (
-    automatic &&
-    hardwareUI.printQr() &&
-    window.posHardware &&
-    !autoQrSessions.has(qr.sessionId)
-  ) {
-    autoQrSessions.add(qr.sessionId);
-    await printCurrentTableQr();
-  }
 }
 $('print-table-qr').onclick = printCurrentTableQr;
 $('close-table-qr').onclick = () => $('table-qr-dialog').close();
@@ -139,6 +129,7 @@ const tableOrdering = setupTableOrdering({
   editable,
   getPending: () => pending,
   showQr: showTableQr,
+  printQrDefault: () => hardwareUI.printQr(),
 });
 const kitchen = setupKitchen({ api, run, notice });
 function showLogin() {
@@ -331,6 +322,7 @@ function renderCart() {
   $('transfer-note').hidden = paymentMethod !== 'TRANSFER';
   $('received').disabled = busy || !!pending;
   $('table-select').disabled = busy || !!pending;
+  $('checkout-ordering').disabled = busy || !!pending;
   for (const button of document.querySelectorAll('[data-payment-method]')) {
     button.setAttribute('aria-pressed', String(button.dataset.paymentMethod === paymentMethod));
     button.disabled = busy || !!pending;
@@ -565,6 +557,7 @@ $('pay').onclick = run(async () => {
     pending = {
       key: draft.key,
       ...(tableId ? { tableId } : {}),
+      ...tableOrdering.checkout(),
       shiftId: shift.id,
       items: cart.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
       method: paymentMethod,
@@ -585,6 +578,8 @@ $('pay').onclick = run(async () => {
   busy = true;
   renderCart();
   try {
+    const printQr = !!pending.printQr && !!pending.tableId;
+    const configuredAtCheckout = !!pending.ordering;
     const sale = await api('checkout', pending);
     tableOrdering.clear();
     pending = null;
@@ -598,20 +593,21 @@ $('pay').onclick = run(async () => {
     $('received').value = '';
     cashReceived = '';
     paymentMethod = 'CASH';
-    receipt(sale);
+    receipt(sale, printQr);
     $('receipt-notice').textContent = window.posHardware
       ? 'บันทึกชำระแล้ว กำลังส่งคำสั่งอุปกรณ์…'
       : '';
     $('print').disabled = true;
     $('receipt-print-qr').disabled = true;
     try {
-      $('receipt-notice').textContent = await outputPaidSale(sale);
+      if (printQr) await previewReceiptQr();
+      $('receipt-notice').textContent = await outputPaidSale(sale, printQr);
     } finally {
       $('print').disabled = false;
       $('receipt-print-qr').disabled = !sale.tableId && !sale.tableNumber;
     }
     try {
-      await tableOrdering.configure(sale);
+      if (!configuredAtCheckout) await tableOrdering.configure(sale);
     } catch {
       notice(
         'ชำระเงินสำเร็จแล้ว แต่โหลดโซนไม่ได้ กรุณาเลือกโซนต่อในเมนู โต๊ะ / ออเดอร์อาหาร ห้ามรับเงินซ้ำ',
@@ -633,13 +629,13 @@ $('pay').onclick = run(async () => {
     renderCart();
   }
 });
-function receipt(sale) {
+function receipt(sale, printQr = false) {
   currentReceipt = sale;
   currentShiftReport = null;
   $('print').textContent = 'พิมพ์ใบเสร็จ';
   $('receipt-notice').textContent = '';
   $('receipt-options').hidden = false;
-  $('receipt-print-qr').checked = false;
+  $('receipt-print-qr').checked = printQr;
   $('receipt-print-qr').disabled = !sale.tableId && !sale.tableNumber;
   renderReceipt($('receipt'), sale, { printQr: $('receipt-print-qr').checked });
   if (!$('receipt-dialog').open) $('receipt-dialog').showModal();

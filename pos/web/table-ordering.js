@@ -1,6 +1,13 @@
 import { confirmAction } from './confirm-action.js';
 
-export function setupTableOrdering({ api, run, editable, getPending, showQr = () => {} }) {
+export function setupTableOrdering({
+  api,
+  run,
+  editable,
+  getPending,
+  showQr = () => {},
+  printQrDefault = () => false,
+}) {
   const $ = (id) => document.getElementById(id);
   const text = (tag, value) => {
     const element = document.createElement(tag);
@@ -10,7 +17,39 @@ export function setupTableOrdering({ api, run, editable, getPending, showQr = ()
   let tables = [],
     timer,
     refreshing = false,
-    configuring = null;
+    configuring = null,
+    checkoutTable = null,
+    checkoutReady = false;
+  async function loadCheckout() {
+    const id = $('table-select').value;
+    $('checkout-ordering').hidden = !id;
+    if (checkoutTable === id && checkoutReady) return;
+    checkoutTable = id;
+    checkoutReady = false;
+    $('checkout-zone-options').replaceChildren();
+    if (!id) return;
+    $('checkout-zone-status').textContent = 'กำลังโหลดโซนอาหาร…';
+    const zones = await api('ordering-zones');
+    if ($('table-select').value !== id) return;
+    const saved = getPending();
+    $('checkout-qr-hours').value = String(
+      saved?.ordering?.qrHours || tables.find((table) => table.id === id)?.qrDurationHours || 2,
+    );
+    $('checkout-print-qr').checked = saved?.printQr ?? printQrDefault();
+    for (const zone of zones) {
+      const label = text('label', '');
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.value = zone;
+      input.checked = saved?.ordering?.zones.includes(zone) || false;
+      label.append(input, text('span', zone));
+      $('checkout-zone-options').append(label);
+    }
+    $('checkout-zone-status').textContent = zones.length
+      ? 'หากไม่เลือกโซน ลูกค้าจะไม่มีเมนูอาหารให้สั่ง'
+      : 'ยังไม่มีโซนอาหาร ตั้งค่าได้ผ่านเว็บแอดมิน';
+    checkoutReady = true;
+  }
   async function refresh() {
     const rows = await api('tables');
     const selected = getPending()?.tableId || $('table-select').value;
@@ -25,6 +64,7 @@ export function setupTableOrdering({ api, run, editable, getPending, showQr = ()
       $('table-select').append(option);
     }
     if (rows.some((row) => row.id === selected)) $('table-select').value = selected;
+    await loadCheckout();
   }
   async function render() {
     if (refreshing) return;
@@ -188,9 +228,13 @@ export function setupTableOrdering({ api, run, editable, getPending, showQr = ()
   $('later-zones').onclick = () => {
     $('zone-dialog').close();
   };
-  $('table-select').onchange = () => {
-    if (!editable()) $('table-select').value = getPending()?.tableId || '';
-  };
+  $('table-select').onchange = run(async () => {
+    if (!editable()) {
+      $('table-select').value = getPending()?.tableId || '';
+      return;
+    }
+    await loadCheckout();
+  });
   $('tables').onclick = run(async () => {
     $('tables-dialog').showModal();
     await render();
@@ -207,8 +251,28 @@ export function setupTableOrdering({ api, run, editable, getPending, showQr = ()
         throw new Error('โต๊ะนี้เปิดอยู่ กรุณาเลือกโต๊ะว่าง');
       return id;
     },
+    checkout() {
+      if (!$('table-select').value) return {};
+      if (!checkoutReady || checkoutTable !== $('table-select').value)
+        throw new Error('กรุณารอโหลดโซนอาหาร หรือเลือกโต๊ะอีกครั้ง');
+      const qrHours = Number($('checkout-qr-hours').value);
+      if (!Number.isInteger(qrHours) || qrHours < 1 || qrHours > 168)
+        throw new Error('อายุ QR ต้องเป็นจำนวนเต็ม 1–168 ชั่วโมง');
+      return {
+        ordering: {
+          zones: [...$('checkout-zone-options').querySelectorAll('input:checked')].map(
+            (input) => input.value,
+          ),
+          qrHours,
+        },
+        printQr: $('checkout-print-qr').checked,
+      };
+    },
     clear() {
       $('table-select').value = '';
+      checkoutTable = null;
+      checkoutReady = false;
+      $('checkout-ordering').hidden = true;
     },
     stop() {
       clearInterval(timer);

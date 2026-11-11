@@ -57,6 +57,11 @@ app.whenReady().then(async () => {
     );
     api.get('/api/pos/me', (_, res) => res.json(user));
     api.get('/api/pos/products', (_, res) => res.json([product]));
+    api.get('/api/pos/ordering-zones', (_, res) => res.json(['หมูกระทะ', 'ทะเล']));
+    api.post('/api/pos/tables/:id/qr', (req, res) => res.json({
+      tableNumber: 9, sessionId: req.body.sessionId,
+      url: `${base}/order/current-round`, qrExpiresAt: new Date(Date.now() + 7200000).toISOString(),
+    }));
     const table = {
       id: 'table-test',
       number: 8,
@@ -141,6 +146,7 @@ app.whenReady().then(async () => {
         id: `sale-${sales.length + 1}`,
         receiptNumber: `261101000000${sales.length + 1}`,
         actor: user.id,
+        ...(req.body.tableId ? { tableNumber: 9, tableSessionId: 'paid-round-test' } : {}),
         createdAt: new Date().toISOString(),
         cashierDisplayName: user.displayName,
         items: [{ ...product, quantity: 1 }],
@@ -373,6 +379,9 @@ app.whenReady().then(async () => {
       'document.getElementById("close-hardware").click();document.getElementById("scan").value="8850123456789";document.getElementById("scan-form").requestSubmit()',
     );
     await wait('document.querySelector(".cart-row") !== null');
+    await js('document.getElementById("table-select").value="table-free-0";document.getElementById("table-select").dispatchEvent(new Event("change"))');
+    await wait('document.querySelectorAll("#checkout-zone-options input").length === 2');
+    await js('document.querySelector("#checkout-zone-options input").checked=true;document.getElementById("checkout-print-qr").checked=true');
     await js(
       'document.getElementById("received").value="300";document.getElementById("received").dispatchEvent(new Event("input"));document.getElementById("pay").click()',
     );
@@ -380,6 +389,9 @@ app.whenReady().then(async () => {
       'document.getElementById("receipt-dialog").open && !document.getElementById("print").disabled && document.getElementById("receipt-notice").textContent.includes("ส่งคำสั่ง")',
     );
     assert.equal(sales.length, 1);
+    assert.deepEqual(sales[0].ordering.zones, ['หมูกระทะ']);
+    assert.equal(sales[0].ordering.qrHours, 2);
+    assert.equal(await js('document.getElementById("receipt-print-qr").checked && !!document.querySelector("#receipt .receipt-qr") && !document.getElementById("zone-dialog").open && !document.getElementById("table-qr-dialog").open'), true);
     assert.deepEqual(writes[3], drawerPulse());
     assert.equal(writes.length, 5);
     await js('document.getElementById("print").click()');

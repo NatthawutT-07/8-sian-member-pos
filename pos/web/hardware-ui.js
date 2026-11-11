@@ -131,10 +131,10 @@ export function setupHardwareUI({ products, role = () => 'USER' }) {
   };
 }
 
-export async function outputPaidSale(sale) {
+export async function outputPaidSale(sale, printQr = false) {
   if (!window.posHardware) return '';
   try {
-    const result = await window.posHardware.afterSale({ saleId: sale.id });
+    const result = await window.posHardware.afterSale({ saleId: sale.id, printQr });
     if (result.errors?.length)
       return `บันทึกชำระแล้ว • ${result.errors.join(' • ')} • ตรวจอุปกรณ์ก่อนทำซ้ำ เปิดลิ้นชักเองได้ที่เมนูอุปกรณ์ ห้ามรับเงินซ้ำ`;
     return (

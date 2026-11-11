@@ -115,7 +115,7 @@ export function setupKitchen({ api, run, notice }) {
         currentTicket = null;
         $('kitchen-ticket-dialog').close();
       }
-      $('kitchen-orders').replaceChildren();
+      const cards = document.createDocumentFragment();
       for (const [index, order] of orders.entries()) {
         const card = el('article', '', 'kitchen-order');
         const header = el('div', '', 'kitchen-order-heading');
@@ -159,10 +159,14 @@ export function setupKitchen({ api, run, notice }) {
         cancel.onclick = cancelOrder(order);
         actions.append(total, print, cancel, done);
         card.append(actions);
-        $('kitchen-orders').append(card);
+        cards.append(card);
       }
       if (!orders.length)
-        $('kitchen-orders').append(el('p', 'ยังไม่มีออเดอร์รอทำ', 'kitchen-empty'));
+        cards.append(el('p', 'ยังไม่มีออเดอร์รอทำ', 'kitchen-empty'));
+      const board = $('kitchen-orders');
+      const scrollLeft = board.scrollLeft;
+      board.replaceChildren(cards);
+      board.scrollLeft = scrollLeft;
       $('kitchen-status').textContent =
         `${orders.length} ออเดอร์รอทำ • เก่าไปใหม่ • อัปเดต ${new Date().toLocaleTimeString('th-TH')}`;
     } finally {

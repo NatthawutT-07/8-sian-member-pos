@@ -33,8 +33,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Android build failed.' }
     $releaseDir = Join-Path $posRoot 'release'
     New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-    Copy-Item -LiteralPath (Join-Path $posRoot 'android/app/build/outputs/apk/release/app-release.apk') -Destination (Join-Path $releaseDir '8-Sian-POS-Huawei-0.6.21.apk')
-    Write-Output 'APK: pos/release/8-Sian-POS-Huawei-0.6.21.apk'
+    Copy-Item -LiteralPath (Join-Path $posRoot 'android/app/build/outputs/apk/release/app-release.apk') -Destination (Join-Path $releaseDir '8-Sian-POS-Huawei-0.6.22.apk')
+    Write-Output 'APK: pos/release/8-Sian-POS-Huawei-0.6.22.apk'
     Write-Output 'Back up pos/local-data/android-signing privately. Future updates must use this same key.'
 } finally {
     Remove-Item Env:POS_ANDROID_STORE_PASSWORD -ErrorAction SilentlyContinue

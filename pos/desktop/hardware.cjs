@@ -200,7 +200,9 @@ function createHardware({ request, transport, render, readSettings, saveSettings
         throw new Error('ระบุเหตุผลเปิดลิ้นชัก ไม่เกิน 120 ตัวอักษร');
       return transmit('OPEN_DRAWER', drawerPulse(settings().drawerPin), reason.trim());
     },
-    async afterSale({ saleId }) {
+    async afterSale({ saleId, printQr }) {
+      if (printQr !== undefined && typeof printQr !== 'boolean')
+        throw new Error('การตั้งค่า QR ไม่ถูกต้อง');
       const config = settings();
       if (!config.deviceId)
         return {
@@ -244,9 +246,7 @@ function createHardware({ request, transport, render, readSettings, saveSettings
       }
       if (config.autoPrint) {
         try {
-          // The ordering QR is issued only after zone confirmation. Automatic
-          // receipt output precedes that step; the POS prints its QR slip later.
-          const result = await printSale(sale, false);
+          const result = await printSale(sale, printQr ?? config.printQr);
           if (result.warning) warnings.push(result.warning);
         } catch (error) {
           errors.push(`ใบเสร็จ: ${error.message}`);

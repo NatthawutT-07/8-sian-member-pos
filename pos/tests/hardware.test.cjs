@@ -9,6 +9,7 @@ function fixture({
   renderFails = false,
   writeFails = false,
   autoDrawer = true,
+  withTable = false,
   deviceId = 'BluetoothLE#printer',
 } = {}) {
   let settings = normalizeSettings({
@@ -20,7 +21,13 @@ function fixture({
     renders = [],
     writes = [],
     claimed = new Set();
-  const sale = { id: 'sale-1', actor: 'cashier', method, receiptNumber: '2611010000001' };
+  const sale = {
+    id: 'sale-1',
+    actor: 'cashier',
+    method,
+    receiptNumber: '2611010000001',
+    ...(withTable ? { tableId: 'table-1', tableSessionId: 'round-1' } : {}),
+  };
   const request = async (route, body) => {
     requests.push({ route, body });
     if (route === 'me') return { id: 'cashier' };
@@ -76,6 +83,24 @@ test('transfer prints without a drawer pulse', async () => {
   await f.handle('afterSale', { saleId: 'sale-1' });
   assert.equal(f.writes.length, 1);
   assert.notDeepEqual(f.writes[0], drawerPulse());
+});
+test('checkout QR is printed on the same receipt and is never a second automatic slip', async () => {
+  const f = fixture({ withTable: true });
+  await f.handle('afterSale', { saleId: 'sale-1', printQr: true });
+  assert.equal(f.renders.length, 1);
+  assert.equal(f.renders[0].kind, 'receipt');
+  assert.equal(f.renders[0].printQr, true);
+  assert.match(f.renders[0].sale.orderingUrl, /8sianracha.com\/order\//);
+  assert.equal(f.writes.length, 2); // One drawer pulse and one combined receipt.
+  await f.handle('afterSale', { saleId: 'sale-1', printQr: true });
+  assert.equal(f.writes.length, 2);
+  const without = fixture({ withTable: true });
+  await without.handle('afterSale', { saleId: 'sale-1', printQr: false });
+  assert.equal(without.renders[0].printQr, false);
+  assert.equal(
+    without.requests.some((request) => request.route === 'tables/table-1/qr'),
+    false,
+  );
 });
 
 test('basic diagnostic prints ASCII without the image renderer or a drawer pulse', async () => {
