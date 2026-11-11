@@ -27,6 +27,22 @@ public final class RasterBandsTest {
         if (!Arrays.equals(pixels, decode(output.toByteArray()))) throw new AssertionError("Printed dots moved or changed");
     }
     public static void main(String[] args) throws Exception {
+        byte[] compatibility = new byte[72 * 8];
+        compatibility[72] = (byte) 128;
+        compatibility[2 * 72 + 50] = 15;
+        compatibility[3 * 72 + 2] = 16;
+        compatibility[6 * 72 + 71] = (byte) 255;
+        compatibility[7 * 72] = (byte) 128;
+        ByteArrayOutputStream legacy = new ByteArrayOutputStream();
+        RasterBands.write(legacy, compatibility, 8);
+        byte[] framed = legacy.toByteArray();
+        int cursor = 0;
+        for (int[] expected : new int[][]{{1, 1}, {51, 3}, {1, 2}, {72, 2}}) {
+            if ((framed[cursor + 4] & 255) != expected[0] || (framed[cursor + 6] & 255) != expected[1])
+                throw new AssertionError("Android 0.6.18 raster framing changed");
+            cursor += 8 + expected[0] * expected[1];
+        }
+        if (cursor != framed.length) throw new AssertionError("Unexpected raster fragments");
         check(new byte[72 * 128], 128);
         byte[] black = new byte[72 * 128]; Arrays.fill(black, (byte) 255); check(black, 128);
         Random random = new Random(8);

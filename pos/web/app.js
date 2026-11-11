@@ -3,6 +3,7 @@ import { setupHardwareUI, outputPaidSale } from './hardware-ui.js';
 import { renderShiftReport } from './shift-receipt.js';
 import { setupTableOrdering } from './table-ordering.js';
 import { setupKitchen } from './kitchen.js';
+import { renderTableQr } from './table-qr.js';
 
 const $ = (id) => document.getElementById(id);
 const money = (n) =>
@@ -31,7 +32,7 @@ let products = [],
   pending = null,
   currentReceipt = null,
   currentShiftReport = null;
-setupHardwareUI({ products: () => products, role: () => activeRole });
+const hardwareUI = setupHardwareUI({ products: () => products, role: () => activeRole });
 try {
   pending = JSON.parse(localStorage.getItem('pos-pending') || 'null');
 } catch {
@@ -72,7 +73,73 @@ const run = (fn) => async (event) => {
     notice(error.message || 'เชื่อมต่อไม่ได้ กรุณาลองใหม่');
   }
 };
-const tableOrdering = setupTableOrdering({ api, run, editable, getPending: () => pending });
+let currentTableQr = null;
+const autoQrSessions = new Set();
+async function printCurrentTableQr() {
+  if (!currentTableQr) return;
+  const target = currentTableQr;
+  $('print-table-qr').disabled = true;
+  try {
+    const live = await api(`tables/${target.tableId}/qr`, {
+      sessionId: target.sessionId,
+    });
+    const job = { ...target, ...live };
+    if (currentTableQr === target) {
+      currentTableQr = job;
+      renderTableQr($('table-qr-preview'), job);
+    }
+    if (window.posHardware)
+      await window.posHardware.printTableQr({
+        tableId: target.tableId,
+        sessionId: target.sessionId,
+      });
+    else {
+      if (currentTableQr?.sessionId !== target.sessionId)
+        throw new Error('เปลี่ยนโต๊ะแล้ว กรุณากดพิมพ์ QR อีกครั้ง');
+      document.body.classList.add('table-qr-print');
+      try {
+        await document.fonts.ready;
+        window.print();
+      } finally {
+        document.body.classList.remove('table-qr-print');
+      }
+    }
+    $('table-qr-notice').textContent = 'ส่งข้อมูลแล้ว กรุณาตรวจ QR ที่พิมพ์';
+  } catch (error) {
+    $('table-qr-notice').textContent = error.message;
+  } finally {
+    $('print-table-qr').disabled = false;
+  }
+}
+async function showTableQr(qr, automatic, tableId) {
+  currentTableQr = { ...qr, tableId };
+  renderTableQr($('table-qr-preview'), qr);
+  if (currentReceipt?.tableId === tableId && currentReceipt.tableSessionId === qr.sessionId) {
+    currentReceipt.orderingUrl = qr.url;
+    currentReceipt.orderingExpiresAt = qr.qrExpiresAt;
+    renderReceipt($('receipt'), currentReceipt, { printQr: $('receipt-print-qr').checked });
+  }
+  $('table-qr-notice').textContent = '';
+  if (!$('table-qr-dialog').open) $('table-qr-dialog').showModal();
+  if (
+    automatic &&
+    hardwareUI.printQr() &&
+    window.posHardware &&
+    !autoQrSessions.has(qr.sessionId)
+  ) {
+    autoQrSessions.add(qr.sessionId);
+    await printCurrentTableQr();
+  }
+}
+$('print-table-qr').onclick = printCurrentTableQr;
+$('close-table-qr').onclick = () => $('table-qr-dialog').close();
+const tableOrdering = setupTableOrdering({
+  api,
+  run,
+  editable,
+  getPending: () => pending,
+  showQr: showTableQr,
+});
 const kitchen = setupKitchen({ api, run, notice });
 function showLogin() {
   kitchen.stop();
@@ -84,11 +151,11 @@ function showLogin() {
   $('kitchen').hidden = true;
   $('operator').textContent = '';
   $('shift-panel').hidden = true;
-  for (const id of ['daily-report', 'history', 'hardware', 'logout', 'tables'])
-    $(id).hidden = true;
+  for (const id of ['daily-report', 'history', 'hardware', 'logout', 'tables']) $(id).hidden = true;
 }
 async function start(user) {
   activeRole = user.role;
+  await hardwareUI.refreshSettings();
   if (user.role === 'CHEF') {
     tableOrdering.stop();
     activeUserId = user.id;
@@ -536,10 +603,12 @@ $('pay').onclick = run(async () => {
       ? 'บันทึกชำระแล้ว กำลังส่งคำสั่งอุปกรณ์…'
       : '';
     $('print').disabled = true;
+    $('receipt-print-qr').disabled = true;
     try {
       $('receipt-notice').textContent = await outputPaidSale(sale);
     } finally {
       $('print').disabled = false;
+      $('receipt-print-qr').disabled = !sale.tableId && !sale.tableNumber;
     }
     try {
       await tableOrdering.configure(sale);
@@ -569,25 +638,52 @@ function receipt(sale) {
   currentShiftReport = null;
   $('print').textContent = 'พิมพ์ใบเสร็จ';
   $('receipt-notice').textContent = '';
-  renderReceipt($('receipt'), sale);
+  $('receipt-options').hidden = false;
+  $('receipt-print-qr').checked = false;
+  $('receipt-print-qr').disabled = !sale.tableId && !sale.tableNumber;
+  renderReceipt($('receipt'), sale, { printQr: $('receipt-print-qr').checked });
   if (!$('receipt-dialog').open) $('receipt-dialog').showModal();
 }
+async function previewReceiptQr() {
+  const sale = currentReceipt;
+  if (!sale) return;
+  if ($('receipt-print-qr').checked && sale.tableId && sale.tableSessionId) {
+    try {
+      const qr = await api(`tables/${sale.tableId}/qr`, { sessionId: sale.tableSessionId });
+      if (currentReceipt !== sale) return;
+      sale.orderingUrl = qr.url;
+      sale.orderingExpiresAt = qr.qrExpiresAt;
+    } catch (error) {
+      $('receipt-notice').textContent = error.message;
+    }
+  }
+  if (currentReceipt === sale)
+    renderReceipt($('receipt'), sale, { printQr: $('receipt-print-qr').checked });
+}
+$('receipt-print-qr').onchange = previewReceiptQr;
 $('print').onclick = run(async () => {
   if ($('print').disabled) return;
   if (window.posHardware) {
     if (!currentReceipt && !currentShiftReport) return;
     $('print').disabled = true;
+    $('receipt-print-qr').disabled = true;
     $('receipt-notice').textContent = 'กำลังพิมพ์ใบเสร็จ…';
     try {
       const result = currentShiftReport
         ? await window.posHardware.printShiftReport({ shiftId: currentShiftReport.shift.id })
-        : await window.posHardware.printReceipt({ saleId: currentReceipt.id });
+        : await window.posHardware.printReceipt({
+            saleId: currentReceipt.id,
+            printQr: $('receipt-print-qr').checked,
+          });
       $('receipt-notice').textContent =
-        result.warning || 'เครื่องรับข้อมูลแล้ว กรุณาตรวจใบเสร็จ • การพิมพ์ซ้ำไม่เปิดลิ้นชัก';
+        result.warning ||
+        'ส่งข้อมูล Bluetooth ครบแล้ว กรุณาตรวจใบเสร็จ • การพิมพ์ซ้ำไม่เปิดลิ้นชัก';
     } catch (error) {
       $('receipt-notice').textContent = error.message;
     } finally {
       $('print').disabled = false;
+      $('receipt-print-qr').disabled =
+        !currentReceipt || (!currentReceipt.tableId && !currentReceipt.tableNumber);
     }
     return;
   }
@@ -629,6 +725,7 @@ async function showClosedShiftReport(id, automatic = false) {
   currentReceipt = null;
   currentShiftReport = report;
   renderShiftReport($('receipt'), report);
+  $('receipt-options').hidden = true;
   $('print').textContent = 'พิมพ์สรุปปิดกะ';
   $('receipt-notice').textContent = '';
   if (!$('receipt-dialog').open) $('receipt-dialog').showModal();
@@ -729,17 +826,18 @@ $('close-form').onsubmit = run(async (event) => {
 async function report() {
   const result = await refreshShift();
   $('report-content').replaceChildren(
-    ...(result.shift ? [
-      text('p', 'จำนวนบิล ' + result.summary.billCount),
-      text('p', 'เงินสดตั้งต้น ' + money(result.shift.openingCashSatang)),
-      text('p', 'ยอดขายเงินสด ' + money(result.summary.cashSatang)),
-      text('p', 'ยอดโอน ' + money(result.summary.transferSatang)),
-      text('h3', 'รายรับกะปัจจุบัน ' + money(result.summary.totalSatang)),
-    ] : [text('p', 'ยังไม่มีกะที่เปิดอยู่')]),
+    ...(result.shift
+      ? [
+          text('p', 'จำนวนบิล ' + result.summary.billCount),
+          text('p', 'เงินสดตั้งต้น ' + money(result.shift.openingCashSatang)),
+          text('p', 'ยอดขายเงินสด ' + money(result.summary.cashSatang)),
+          text('p', 'ยอดโอน ' + money(result.summary.transferSatang)),
+          text('h3', 'รายรับกะปัจจุบัน ' + money(result.summary.totalSatang)),
+        ]
+      : [text('p', 'ยังไม่มีกะที่เปิดอยู่')]),
   );
 }
 $('daily-report').onclick = run(async () => {
-
   const heading = $('report-dialog').querySelector('h2');
   if (heading) heading.textContent = 'กะปัจจุบัน';
   await report();

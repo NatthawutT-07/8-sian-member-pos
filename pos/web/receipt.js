@@ -6,7 +6,7 @@ const money = (n) =>
 export const formatMemberPhone = (value) =>
   /^\d{10}$/.test(value || '') ? `xxx-xxx-${value.slice(-4)}` : value || '';
 
-export function renderReceipt(root, sale) {
+export function renderReceipt(root, sale, { printQr = false } = {}) {
   const doc = root.ownerDocument;
   const text = (tag, value, cls) => {
     const el = doc.createElement(tag);
@@ -96,6 +96,6 @@ export function renderReceipt(root, sale) {
   time.dateTime = new Date(sale.createdAt).toISOString();
   footer.append(time);
   root.append(footer);
-  const qr = renderReceiptQr(doc, sale);
+  const qr = printQr === true ? renderReceiptQr(doc, sale) : null;
   if (qr) root.append(qr);
 }

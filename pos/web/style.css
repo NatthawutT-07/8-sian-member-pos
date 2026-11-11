@@ -240,6 +240,82 @@ dialog::backdrop {
   gap: 8px;
   margin-top: 24px;
 }
+.receipt-options {
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid #d5ddd3;
+  border-radius: 10px;
+  background: #f3f7f1;
+}
+.receipt-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+}
+.receipt-options input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: #1d684c;
+}
+.receipt-options small {
+  display: block;
+  margin-top: 6px;
+  color: #68766c;
+  font-size: 11px;
+}
+#table-qr-preview {
+  text-align: center;
+}
+.table-card-actions {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+}
+.table-card-actions button {
+  min-width: 0;
+  flex: 1;
+}
+#tables-dialog .table-qr-button {
+  min-height: 26px;
+  padding: 3px 4px;
+  font-size: 10px;
+}
+#table-qr-preview p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.zone-qr-hours {
+  margin: 12px 0;
+  font-size: 13px;
+}
+#zone-qr-hours {
+  width: 100px;
+  display: inline-block;
+  margin-left: 10px;
+}
+@media print {
+  body.table-qr-print #receipt-dialog {
+    display: none !important;
+  }
+  body.table-qr-print #table-qr-dialog {
+    display: block !important;
+    position: static;
+    width: 72mm;
+    max-height: none;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+  }
+  body.table-qr-print #table-qr-title,
+  body.table-qr-print #table-qr-notice {
+    display: none;
+  }
+}
 #hardware-dialog {
   width: min(640px, 94vw);
 }
@@ -943,6 +1019,7 @@ dialog::backdrop {
   }
   #receipt-dialog::backdrop,
   .receipt-actions,
+  .receipt-options,
   #receipt-notice {
     display: none !important;
   }

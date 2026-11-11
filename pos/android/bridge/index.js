@@ -52,8 +52,7 @@ const hardware = createHardware({
         changeSatang: 100,
         createdAt: new Date().toISOString(),
       };
-    if (!['shift', 'kitchen'].includes(data.kind))
-      data.code = barcode(data.kind === 'barcode' ? data.product.barcode : data.sale.receiptNumber);
+    if (data.kind === 'barcode') data.code = barcode(data.product.barcode);
     return Buffer.from(await native('render', data), 'base64');
   },
 });
@@ -64,7 +63,9 @@ window.posHardware = Object.fromEntries(
     'connect',
     'configure',
     'testPrint',
+    'testText',
     'printReceipt',
+    'printTableQr',
     'printKitchenTicket',
     'printShiftReport',
     'printBarcode',

@@ -37,9 +37,49 @@ function raster(bgra, width, height) {
         if (onWhite < 200) pixels[y * stride + (x >> 3)] |= 0x80 >> (x & 7);
       }
     }
-    commands.push(Buffer.from([29, 118, 48, 0, stride, 0, rows, 0]), pixels);
+    commands.push(rasterBands(pixels, rows));
   }
   return Buffer.concat(commands);
+}
+
+// Minimize bytes without changing a single dot or advancing fewer rows. Each
+// segment may omit only its white right margin; blank rows still retain height.
+function rasterBands(pixels, rows) {
+  const stride = WIDTH / 8;
+  if (!Number.isInteger(rows) || rows < 1 || rows > 128 || pixels.length !== rows * stride)
+    throw new Error('ขนาดช่วงภาพไม่ถูกต้อง');
+  const widths = Array(rows).fill(0);
+  for (let y = 0; y < rows; y++)
+    for (let x = stride - 1; x >= 0; x--)
+      if (pixels[y * stride + x]) {
+        widths[y] = x + 1;
+        break;
+      }
+  const cost = Array(rows + 1).fill(Infinity),
+    split = [],
+    segmentWidth = [];
+  cost[0] = 0;
+  for (let end = 1; end <= rows; end++) {
+    let width = 1;
+    for (let start = end - 1; start >= 0; start--) {
+      width = Math.max(width, widths[start]);
+      const candidate = cost[start] + 8 + width * (end - start);
+      if (candidate <= cost[end]) {
+        cost[end] = candidate;
+        split[end] = start;
+        segmentWidth[end] = width;
+      }
+    }
+  }
+  const segments = [];
+  for (let end = rows; end > 0; end = split[end])
+    segments.push({ start: split[end], end, width: segmentWidth[end] });
+  const output = [];
+  for (const { start, end, width } of segments.reverse()) {
+    output.push(Buffer.from([29, 118, 48, 0, width, 0, end - start, 0]));
+    for (let y = start; y < end; y++) output.push(pixels.subarray(y * stride, y * stride + width));
+  }
+  return Buffer.concat(output);
 }
 
 function finishPrint(imageBytes, cut = true, feedLines = 4) {
@@ -56,4 +96,4 @@ function drawerPulse(pin = 2) {
   return Buffer.from([27, 64, 27, 112, pin === 2 ? 48 : 49, 100, 250]);
 }
 
-module.exports = { WIDTH, barcode, raster, finishPrint, drawerPulse };
+module.exports = { WIDTH, barcode, raster, rasterBands, finishPrint, drawerPulse };

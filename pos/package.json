@@ -1,6 +1,6 @@
 {
   "name": "8sian-pos",
-  "version": "0.6.18",
+  "version": "0.6.21",
   "private": true,
   "description": "8 Sian Windows POS",
   "author": "8 Sian",
@@ -11,6 +11,7 @@
     "build:win": "electron-builder --win nsis --x64 --publish never",
     "test": "node --test tests/*.test.cjs",
     "check:render": "electron scripts/check-render.cjs",
+    "check:receipt": "electron scripts/check-receipt-options.cjs",
     "check:desktop": "electron scripts/check-desktop.cjs",
     "check:hardware-ui": "electron scripts/check-hardware-ui.cjs",
     "prepare:android": "node scripts/prepare-android.cjs",

@@ -5,6 +5,7 @@ const DEFAULTS = Object.freeze({
   deviceId: '',
   deviceName: '',
   autoPrint: true,
+  printQr: false,
   autoDrawer: false,
   cut: true,
   drawerPin: 2,
@@ -14,7 +15,7 @@ function normalizeSettings(value = {}) {
   const result = { ...DEFAULTS };
   for (const key of ['deviceId', 'deviceName'])
     if (typeof value[key] === 'string' && value[key].length <= 300) result[key] = value[key];
-  for (const key of ['autoPrint', 'autoDrawer', 'cut'])
+  for (const key of ['autoPrint', 'autoDrawer', 'cut', 'printQr'])
     if (typeof value[key] === 'boolean') result[key] = value[key];
   if ([2, 5].includes(value.drawerPin)) result.drawerPin = value.drawerPin;
   return result;
@@ -63,9 +64,20 @@ function createHardware({ request, transport, render, readSettings, saveSettings
       throw error;
     }
   }
-  async function printSale(sale) {
-    const payload = finishPrint(await render({ kind: 'receipt', sale }), settings().cut);
-    return transmit('PRINT_RECEIPT', payload, 'พิมพ์ใบเสร็จ', sale.id);
+  async function printSale(sale, printQr = settings().printQr) {
+    let qrWarning = '';
+    if (printQr && sale.tableId && sale.tableSessionId) {
+      try {
+        const qr = await request(`tables/${sale.tableId}/qr`, { sessionId: sale.tableSessionId });
+        sale = { ...sale, orderingUrl: qr.url, orderingExpiresAt: qr.qrExpiresAt };
+      } catch {
+        printQr = false;
+        qrWarning = 'ไม่ได้พิมพ์ QR: กรุณาเปิดโซนโต๊ะและตรวจอายุ QR ก่อน';
+      }
+    }
+    const payload = finishPrint(await render({ kind: 'receipt', sale, printQr }), settings().cut);
+    const result = await transmit('PRINT_RECEIPT', payload, 'พิมพ์ใบเสร็จ', sale.id);
+    return { ...result, warning: [result.warning, qrWarning].filter(Boolean).join(' • ') };
   }
   const actions = {
     async status() {
@@ -92,19 +104,50 @@ function createHardware({ request, transport, render, readSettings, saveSettings
       }
       if (![2, 5].includes(input.drawerPin)) throw new Error('ขาลิ้นชักไม่ถูกต้อง');
       config.drawerPin = input.drawerPin;
+      if (input.printQr !== undefined) {
+        if (typeof input.printQr !== 'boolean') throw new Error('การตั้งค่า QR ไม่ถูกต้อง');
+        config.printQr = input.printQr;
+      }
       saveSettings(config);
       return { settings: config };
     },
     async testPrint() {
       return transmit(
         'TEST_PRINT',
-        finishPrint(await render({ kind: 'test' }), settings().cut),
+        finishPrint(await render({ kind: 'test', printQr: settings().printQr }), settings().cut),
         'ทดสอบเครื่องพิมพ์',
       );
     },
-    async printReceipt({ saleId }) {
+    async testText() {
+      const text = Buffer.concat([
+        Buffer.from([27, 64, 27, 97, 1]),
+        Buffer.from('8 SIAN POS\nBASIC PRINTER TEST\nBluetooth data test\n', 'ascii'),
+      ]);
+      return transmit(
+        'TEST_PRINT',
+        finishPrint(text, settings().cut),
+        'ทดสอบข้อความพื้นฐานโดยไม่ใช้ภาพ',
+      );
+    },
+    async printReceipt({ saleId, printQr }) {
       if (typeof saleId !== 'string' || saleId.length > 100) throw new Error('เลขบิลไม่ถูกต้อง');
-      return printSale(await request(`sales/${encodeURIComponent(saleId)}`));
+      if (printQr !== undefined && typeof printQr !== 'boolean')
+        throw new Error('ตัวเลือก QR ไม่ถูกต้อง');
+      return printSale(await request(`sales/${encodeURIComponent(saleId)}`), printQr);
+    },
+    async printTableQr({ tableId, sessionId }) {
+      if (
+        ![tableId, sessionId].every(
+          (value) => typeof value === 'string' && /^[a-zA-Z0-9-]{1,100}$/.test(value),
+        )
+      )
+        throw new Error('รอบโต๊ะไม่ถูกต้อง');
+      const tableQr = await request(`tables/${tableId}/qr`, { sessionId });
+      return transmit(
+        'PRINT_TABLE_QR',
+        finishPrint(await render({ kind: 'table-qr', tableQr }), settings().cut),
+        `พิมพ์ QR โต๊ะ ${tableQr.tableNumber}`,
+      );
     },
     async printKitchenTicket({ orderId }) {
       if (typeof orderId !== 'string' || !/^[a-zA-Z0-9-]{1,100}$/.test(orderId))
@@ -201,7 +244,9 @@ function createHardware({ request, transport, render, readSettings, saveSettings
       }
       if (config.autoPrint) {
         try {
-          const result = await printSale(sale);
+          // The ordering QR is issued only after zone confirmation. Automatic
+          // receipt output precedes that step; the POS prints its QR slip later.
+          const result = await printSale(sale, false);
           if (result.warning) warnings.push(result.warning);
         } catch (error) {
           errors.push(`ใบเสร็จ: ${error.message}`);
@@ -221,9 +266,15 @@ function createHardware({ request, transport, render, readSettings, saveSettings
     const user = await request('me');
     if (
       user.role === 'CHEF' &&
-      !['status', 'list', 'connect', 'configure', 'testPrint', 'printKitchenTicket'].includes(
-        action,
-      )
+      ![
+        'status',
+        'list',
+        'connect',
+        'configure',
+        'testPrint',
+        'testText',
+        'printKitchenTicket',
+      ].includes(action)
     )
       throw new Error('บัญชีพ่อครัวไม่มีสิทธิ์ใช้งานคำสั่งนี้');
     if (action === 'status') return actions.status();

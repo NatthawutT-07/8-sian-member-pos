@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createHardware, normalizeSettings } = require('../desktop/hardware.cjs');
-const { barcode, raster, drawerPulse, finishPrint } = require('../desktop/escpos.cjs');
+const { barcode, raster, rasterBands, drawerPulse, finishPrint } = require('../desktop/escpos.cjs');
 const { isTrustedFrame } = require('../desktop/trusted-frame.cjs');
 
 function fixture({
@@ -17,6 +17,7 @@ function fixture({
     autoDrawer,
   });
   const requests = [],
+    renders = [],
     writes = [],
     claimed = new Set();
   const sale = { id: 'sale-1', actor: 'cashier', method, receiptNumber: '2611010000001' };
@@ -30,6 +31,13 @@ function fixture({
       return { claimed: true, cash: method === 'CASH' };
     }
     if (route === 'hardware/events') return { ok: true };
+    if (route === 'tables/table-1/qr')
+      return {
+        tableNumber: 3,
+        sessionId: 'round-1',
+        url: 'https://8sianracha.com/order/c23096c1-cbe5-465d-9348-673e7b43cb1a',
+        qrExpiresAt: new Date(Date.now() + 7200000).toISOString(),
+      };
     throw new Error(`Unexpected route ${route}`);
   };
   const handle = createHardware({
@@ -39,7 +47,8 @@ function fixture({
       if (writeFails) throw new Error('disconnected');
       return { ok: true };
     },
-    render: async () => {
+    render: async (input) => {
+      renders.push(input);
       if (renderFails) throw new Error('render failed');
       return Buffer.from('receipt-image');
     },
@@ -48,7 +57,7 @@ function fixture({
       settings = value;
     },
   });
-  return { handle, writes, requests };
+  return { handle, writes, requests, renders };
 }
 
 test('cash checkout opens once, prints once; retry and reprint never open again', async () => {
@@ -67,6 +76,31 @@ test('transfer prints without a drawer pulse', async () => {
   await f.handle('afterSale', { saleId: 'sale-1' });
   assert.equal(f.writes.length, 1);
   assert.notDeepEqual(f.writes[0], drawerPulse());
+});
+
+test('basic diagnostic prints ASCII without the image renderer or a drawer pulse', async () => {
+  const f = fixture({ renderFails: true });
+  await f.handle('testText');
+  assert.equal(f.renders.length, 0);
+  assert.equal(f.writes.length, 1);
+  assert.ok(f.writes[0].includes(Buffer.from('8 SIAN POS\nBASIC PRINTER TEST\n')));
+  assert.equal(f.writes[0].includes(drawerPulse()), false);
+  assert.deepEqual(
+    f.requests.filter((x) => x.route === 'hardware/events').map((x) => x.body.status),
+    ['REQUESTED', 'SENT'],
+  );
+});
+
+test('table QR prints the live round URL as a separate slip without opening the drawer', async () => {
+  const f = fixture();
+  await f.handle('printTableQr', { tableId: 'table-1', sessionId: 'round-1' });
+  assert.equal(f.renders.at(-1).kind, 'table-qr');
+  assert.match(f.renders.at(-1).tableQr.url, /\/order\//);
+  assert.equal(f.writes.length, 1);
+  assert.equal(f.writes[0].includes(drawerPulse()), false);
+  assert.ok(
+    f.requests.some((x) => x.route === 'hardware/events' && x.body.operation === 'PRINT_TABLE_QR'),
+  );
 });
 
 test('automatic output explains why no cash drawer command was sent', async () => {
@@ -201,11 +235,66 @@ test('raster packs leftmost black pixel as MSB and transparent pixels as white',
   pixels[0] = pixels[1] = pixels[2] = 0;
   pixels[4] = pixels[5] = pixels[6] = pixels[7] = 0;
   const data = raster(pixels, 576, 129);
-  assert.deepEqual([...data.subarray(5, 13)], [29, 118, 48, 0, 72, 0, 128, 0]);
-  assert.equal(data[13], 128);
-  assert.deepEqual([...data.subarray(13 + 72 * 128, 21 + 72 * 128)], [29, 118, 48, 0, 72, 0, 1, 0]);
+  const decoded = decodeRaster(data.subarray(5));
+  assert.equal(decoded.length, 72 * 129);
+  assert.equal(decoded[0], 128);
+  assert.ok(decoded.subarray(1).every((value) => value === 0));
+  assert.ok(data.length < 300, 'white rows must not consume full-width image data');
   assert.throws(() => raster(pixels, 575, 129));
   assert.deepEqual([...finishPrint(Buffer.alloc(0), false)], [27, 100, 4]);
+});
+
+function decodeRaster(data) {
+  const rows = [];
+  for (let offset = 0; offset < data.length;) {
+    assert.deepEqual([...data.subarray(offset, offset + 4)], [29, 118, 48, 0]);
+    const width = data.readUInt16LE(offset + 4),
+      height = data.readUInt16LE(offset + 6);
+    assert.ok(width >= 1 && width <= 72 && height >= 1 && height <= 128);
+    offset += 8;
+    for (let y = 0; y < height; y++) {
+      const row = Buffer.alloc(72);
+      data.copy(row, 0, offset, offset + width);
+      rows.push(row);
+      offset += width;
+    }
+  }
+  return Buffer.concat(rows);
+}
+
+test('compact raster retains all dots and row positions across dense, narrow and blank bands', () => {
+  for (const height of [1, 31, 128]) {
+    const pixels = Buffer.alloc(72 * height);
+    for (let y = 0; y < height; y++) {
+      const width = y % 9 === 0 ? 72 : y % 3 === 0 ? 0 : 18;
+      for (let x = 0; x < width; x++) pixels[y * 72 + x] = (x * 17 + y * 11) & 255;
+    }
+    const encoded = rasterBands(pixels, height);
+    assert.deepEqual(decodeRaster(encoded), pixels);
+    assert.ok(encoded.length <= 8 + pixels.length);
+  }
+  assert.throws(() => rasterBands(Buffer.alloc(0), 0));
+});
+
+test('receipt QR defaults off, saved preference applies automatically, manual override is per receipt', async () => {
+  assert.equal(normalizeSettings().printQr, false);
+  const f = fixture();
+  await f.handle('afterSale', { saleId: 'sale-1' });
+  assert.equal(f.renders[0].printQr, false);
+  await f.handle('configure', {
+    autoPrint: true,
+    autoDrawer: true,
+    cut: true,
+    drawerPin: 2,
+    printQr: true,
+  });
+  await f.handle('printReceipt', { saleId: 'sale-1' });
+  assert.equal(f.renders.at(-1).printQr, true);
+  await f.handle('printReceipt', { saleId: 'sale-1', printQr: false });
+  assert.equal(f.renders.at(-1).printQr, false);
+  assert.equal((await f.handle('status')).settings.printQr, true);
+  await assert.rejects(f.handle('printReceipt', { saleId: 'sale-1', printQr: 'yes' }), /QR/);
+  assert.equal(f.writes.filter((bytes) => bytes.equals(drawerPulse())).length, 1);
 });
 test('CODE128 maintains two-dot bars and quiet zones within paper; oversized codes reject', () => {
   const code = barcode('2611010000001');
@@ -219,7 +308,13 @@ test('CODE128 maintains two-dot bars and quiet zones within paper; oversized cod
 
 test('thermal raster retains light glyph edges but keeps white gaps and barcode bars exact', () => {
   const pixels = Buffer.alloc(576 * 4, 255);
-  for (const [x, gray] of [[0, 190], [1, 200], [2, 0], [3, 0], [4, 255]]) {
+  for (const [x, gray] of [
+    [0, 190],
+    [1, 200],
+    [2, 0],
+    [3, 0],
+    [4, 255],
+  ]) {
     pixels[x * 4] = pixels[x * 4 + 1] = pixels[x * 4 + 2] = gray;
   }
   assert.equal(raster(pixels, 576, 1)[13], 0b10110000);

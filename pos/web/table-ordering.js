@@ -1,6 +1,6 @@
 import { confirmAction } from './confirm-action.js';
 
-export function setupTableOrdering({ api, run, editable, getPending }) {
+export function setupTableOrdering({ api, run, editable, getPending, showQr = () => {} }) {
   const $ = (id) => document.getElementById(id);
   const text = (tag, value) => {
     const element = document.createElement(tag);
@@ -42,6 +42,8 @@ export function setupTableOrdering({ api, run, editable, getPending }) {
         status.className = 'table-state';
         row.append(heading, status);
         if (table.sessionId) {
+          const actions = text('div', '');
+          actions.className = 'table-card-actions';
           if (!table.orderingEnabled) {
             const activate = text('button', 'เลือกโซน / เปิดโต๊ะ');
             activate.className = 'table-activate';
@@ -52,11 +54,22 @@ export function setupTableOrdering({ api, run, editable, getPending }) {
                 tableSessionId: table.sessionId,
               }),
             );
-            row.append(activate);
+            actions.append(activate);
           } else {
             const zones = text('p', `โซน: ${table.zones.join(', ') || 'ไม่เปิดโซนอาหาร'}`);
             zones.className = 'table-zones';
             row.append(zones);
+            const qr = text('button', 'QR');
+            qr.className = 'table-qr-button';
+            qr.title = 'ดู / พิมพ์ QR รอบนี้';
+            qr.onclick = run(async () =>
+              showQr(
+                await api(`tables/${table.id}/qr`, { sessionId: table.sessionId }),
+                false,
+                table.id,
+              ),
+            );
+            actions.append(qr);
           }
           const button = text('button', 'ปิดโต๊ะ');
           button.className = 'table-close';
@@ -75,7 +88,8 @@ export function setupTableOrdering({ api, run, editable, getPending }) {
               button.disabled = false;
             }
           });
-          row.append(button);
+          actions.append(button);
+          row.append(actions);
         }
         $('table-list').append(row);
       }
@@ -122,6 +136,9 @@ export function setupTableOrdering({ api, run, editable, getPending }) {
     const zones = await api('ordering-zones');
     configuring = sale;
     $('zone-table').textContent = `โต๊ะ ${sale.tableNumber} • ชำระเงินสำเร็จแล้ว`;
+    $('zone-qr-hours').value = String(
+      tables.find((table) => table.id === sale.tableId)?.qrDurationHours || 2,
+    );
     $('zone-options').replaceChildren();
     for (const zone of zones) {
       const label = text('label', '');
@@ -155,9 +172,13 @@ export function setupTableOrdering({ api, run, editable, getPending }) {
       await api(`tables/${configuring.tableId}/activate`, {
         sessionId: configuring.tableSessionId,
         zones,
+        qrHours: Number($('zone-qr-hours').value),
       });
+      const tableId = configuring.tableId,
+        sessionId = configuring.tableSessionId;
       configuring = null;
       $('zone-dialog').close();
+      await showQr(await api(`tables/${tableId}/qr`, { sessionId }), true, tableId);
       await refresh();
       if ($('tables-dialog').open) await render();
     } finally {

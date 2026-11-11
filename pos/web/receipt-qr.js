@@ -1,13 +1,12 @@
 import { create } from './vendor/qrcode.js';
 
 export function receiptCode(sale) {
-  return sale.id ? `8SR-${sale.id}` : null;
+  return sale.orderingUrl && new Date(sale.orderingExpiresAt).getTime() > Date.now()
+    ? sale.orderingUrl
+    : null;
 }
 
-export function renderReceiptQr(doc, sale) {
-  if (!sale.tableId && !sale.tableNumber) return null;
-  const value = receiptCode(sale);
-  if (!value) return null;
+export function renderQrCode(doc, value, label = 'QR สั่งอาหาร') {
   const { modules } = create(value, { errorCorrectionLevel: 'H' });
   const ns = 'http://www.w3.org/2000/svg';
   const svg = doc.createElementNS(ns, 'svg');
@@ -20,7 +19,7 @@ export function renderReceiptQr(doc, sale) {
   svg.setAttribute('width', pixels);
   svg.setAttribute('height', pixels);
   svg.setAttribute('role', 'img');
-  svg.setAttribute('aria-label', `QR ใบเสร็จ ${sale.receiptNumber || sale.id}`);
+  svg.setAttribute('aria-label', label);
   svg.setAttribute('shape-rendering', 'crispEdges');
   const background = doc.createElementNS(ns, 'rect');
   background.setAttribute('width', String(size));
@@ -34,10 +33,18 @@ export function renderReceiptQr(doc, sale) {
   path.setAttribute('d', data);
   path.setAttribute('fill', '#000');
   svg.append(background, path);
+  return svg;
+}
+
+export function renderReceiptQr(doc, sale) {
+  if (!sale.tableId && !sale.tableNumber) return null;
+  const value = receiptCode(sale);
+  if (!value) return null;
+  const svg = renderQrCode(doc, value);
   const block = doc.createElement('div');
   block.className = 'receipt-qr';
   const label = doc.createElement('p');
-  label.textContent = 'สแกน QR ที่ POS เพื่อเปิด / พิมพ์ใบเสร็จซ้ำ';
+  label.textContent = `สแกนสั่งอาหาร • ใช้ได้ถึง ${new Date(sale.orderingExpiresAt).toLocaleString('th-TH')}`;
   block.append(svg, label);
   return block;
 }

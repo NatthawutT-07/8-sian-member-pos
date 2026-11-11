@@ -2,16 +2,27 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const QRCode = require('qrcode');
 
-test('receipt QR encodes the exact sale identifier with a four-module quiet zone', async () => {
+test('receipt QR encodes the live table ordering URL with a four-module quiet zone', async () => {
   const { renderReceiptQr, receiptCode } = await import('../web/receipt-qr.js');
   const node = () => ({
-    attributes: {}, children: [],
-    setAttribute(key, value) { this.attributes[key] = value; },
-    append(...children) { this.children.push(...children); },
+    attributes: {},
+    children: [],
+    setAttribute(key, value) {
+      this.attributes[key] = value;
+    },
+    append(...children) {
+      this.children.push(...children);
+    },
   });
   const doc = { createElement: node, createElementNS: node };
-  const sale = { id: 'c23096c1-cbe5-465d-9348-673e7b43cb1a', receiptNumber: '2611090000001', tableNumber: 8 };
-  assert.equal(receiptCode(sale), `8SR-${sale.id}`);
+  const sale = {
+    id: 'c23096c1-cbe5-465d-9348-673e7b43cb1a',
+    receiptNumber: '2611090000001',
+    tableNumber: 8,
+    orderingUrl: 'https://8sianracha.com/order/c23096c1-cbe5-465d-9348-673e7b43cb1a',
+    orderingExpiresAt: new Date(Date.now() + 7200000).toISOString(),
+  };
+  assert.equal(receiptCode(sale), sale.orderingUrl);
   const block = renderReceiptQr(doc, sale);
   const svg = block.children[0];
   const { modules } = QRCode.create(receiptCode(sale), { errorCorrectionLevel: 'H' });
@@ -28,6 +39,10 @@ test('receipt QR encodes the exact sale identifier with a four-module quiet zone
       if (modules.get(y, x)) expected += `M${x + 4} ${y + 4}h1v1h-1z`;
   assert.equal(svg.children[1].attributes.d, expected);
   assert.equal(renderReceiptQr(doc, {}), null);
+  assert.equal(
+    renderReceiptQr(doc, { ...sale, orderingExpiresAt: new Date(0).toISOString() }),
+    null,
+  );
   assert.equal(renderReceiptQr(doc, { ...sale, tableNumber: null }), null);
   assert.equal(renderReceiptQr(doc, { ...sale, tableNumber: '' }), null);
   assert.ok(renderReceiptQr(doc, { ...sale, tableNumber: null, tableId: 'selected-table' }));

@@ -57,17 +57,48 @@ app.whenReady().then(async () => {
     );
     api.get('/api/pos/me', (_, res) => res.json(user));
     api.get('/api/pos/products', (_, res) => res.json([product]));
-    const table = { id: 'table-test', number: 8, sessionId: 'round-test', orderingEnabled: true, zones: ['อาหาร'] };
-    let tableCloses = 0, failOrders = true;
-    api.get('/api/pos/tables', (_, res) => res.json([table,
-      ...Array.from({ length: 9 }, (_, index) => ({ id: `table-free-${index}`, number: index + 9, sessionId: null, orderingEnabled: false, zones: [] })),
-    ]));
-    api.get('/api/pos/table-orders', (_, res) => failOrders
-      ? res.status(503).json({ message: 'โหลดออเดอร์ไม่สำเร็จ (ทดสอบ)' }) : res.json(table.sessionId ? [{
-        id: 'food-test', tableId: table.id, sessionId: table.sessionId,
-        table: { number: table.number, sessionId: table.sessionId }, createdAt: new Date().toISOString(),
-        items: [{ name: 'กุ้งสด', quantity: 4 }, { name: 'ไก่ป๊อป', quantity: 2 }],
-      }] : []));
+    const table = {
+      id: 'table-test',
+      number: 8,
+      sessionId: 'round-test',
+      orderingEnabled: true,
+      zones: ['อาหาร'],
+    };
+    let tableCloses = 0,
+      failOrders = true;
+    api.get('/api/pos/tables', (_, res) =>
+      res.json([
+        table,
+        ...Array.from({ length: 9 }, (_, index) => ({
+          id: `table-free-${index}`,
+          number: index + 9,
+          sessionId: null,
+          orderingEnabled: false,
+          zones: [],
+        })),
+      ]),
+    );
+    api.get('/api/pos/table-orders', (_, res) =>
+      failOrders
+        ? res.status(503).json({ message: 'โหลดออเดอร์ไม่สำเร็จ (ทดสอบ)' })
+        : res.json(
+            table.sessionId
+              ? [
+                  {
+                    id: 'food-test',
+                    tableId: table.id,
+                    sessionId: table.sessionId,
+                    table: { number: table.number, sessionId: table.sessionId },
+                    createdAt: new Date().toISOString(),
+                    items: [
+                      { name: 'กุ้งสด', quantity: 4 },
+                      { name: 'ไก่ป๊อป', quantity: 2 },
+                    ],
+                  },
+                ]
+              : [],
+          ),
+    );
     api.post('/api/pos/tables/:id/close', (req, res) => {
       assert.equal(user.role, 'USER');
       assert.equal(req.params.id, table.id);
@@ -218,31 +249,56 @@ app.whenReady().then(async () => {
     };
     await win.loadURL(`${base}/pos/`);
     await wait('document.querySelector(".product") !== null');
-    assert.equal(await js('document.getElementById("shift-reports") === null && document.getElementById("report-date") === null'), true);
+    assert.equal(
+      await js(
+        'document.getElementById("shift-reports") === null && document.getElementById("report-date") === null',
+      ),
+      true,
+    );
     await js('document.getElementById("daily-report").click()');
     await wait('document.getElementById("report-dialog").open');
-    assert.ok((await js('document.getElementById("report-content").textContent')).includes('รายรับกะปัจจุบัน'));
+    assert.ok(
+      (await js('document.getElementById("report-content").textContent')).includes(
+        'รายรับกะปัจจุบัน',
+      ),
+    );
     await js('document.getElementById("close-report").click()');
-    for (const [width, height] of [[1280, 800], [1024, 700], [768, 1024]]) {
+    for (const [width, height] of [
+      [1280, 800],
+      [1024, 700],
+      [768, 1024],
+    ]) {
       win.setContentSize(width, height);
-      await js('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+      await js(
+        'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))',
+      );
       const layout = await js(`(() => {
         const pay = document.getElementById('pay').getBoundingClientRect();
         return { overflow: document.documentElement.scrollWidth > innerWidth,
           payRight: pay.right, payBottom: pay.bottom, width: innerWidth, height: innerHeight };
       })()`);
       assert.equal(layout.overflow, false, `Horizontal overflow at ${width}`);
-      assert.ok(layout.payRight <= layout.width && layout.payBottom <= layout.height, `Checkout offscreen at ${width}x${height}`);
+      assert.ok(
+        layout.payRight <= layout.width && layout.payBottom <= layout.height,
+        `Checkout offscreen at ${width}x${height}`,
+      );
     }
     win.setContentSize(1280, 800);
     fs.mkdirSync(path.resolve(__dirname, '../../.tmp/pos-hardware'), { recursive: true });
     await win.webContents.capturePage(undefined, { stayHidden: true });
     await new Promise((resolve) => setTimeout(resolve, 200));
-    fs.writeFileSync(path.resolve(__dirname, '../../.tmp/pos-hardware/cashier-layout.png'),
-      (await win.webContents.capturePage(undefined, { stayHidden: true })).toPNG());
-    await js('window.confirm = () => { throw new Error("Native confirm unavailable in WebView"); }; document.getElementById("tables").click()');
-    await wait('document.getElementById("tables-dialog").open && document.querySelector("#table-list button") !== null && document.querySelector("#tables-dialog [data-dialog-notice]").textContent.includes("โหลดออเดอร์")');
-    const cards = await js(`Array.from(document.querySelectorAll('#table-list .dining-table')).map(el => {
+    fs.writeFileSync(
+      path.resolve(__dirname, '../../.tmp/pos-hardware/cashier-layout.png'),
+      (await win.webContents.capturePage(undefined, { stayHidden: true })).toPNG(),
+    );
+    await js(
+      'window.confirm = () => { throw new Error("Native confirm unavailable in WebView"); }; document.getElementById("tables").click()',
+    );
+    await wait(
+      'document.getElementById("tables-dialog").open && document.querySelector("#table-list button") !== null && document.querySelector("#tables-dialog [data-dialog-notice]").textContent.includes("โหลดออเดอร์")',
+    );
+    const cards =
+      await js(`Array.from(document.querySelectorAll('#table-list .dining-table')).map(el => {
       const box = el.getBoundingClientRect();
       return { width: box.width, height: box.height, color: getComputedStyle(el).backgroundColor, text: el.textContent };
     })`);
@@ -255,8 +311,11 @@ app.whenReady().then(async () => {
     fs.mkdirSync(path.dirname(tablePreview), { recursive: true });
     await win.webContents.capturePage(undefined, { stayHidden: true });
     await new Promise((resolve) => setTimeout(resolve, 200));
-    fs.writeFileSync(tablePreview, (await win.webContents.capturePage(undefined, { stayHidden: true })).toPNG());
-    await js('document.querySelector("#table-list button").click()');
+    fs.writeFileSync(
+      tablePreview,
+      (await win.webContents.capturePage(undefined, { stayHidden: true })).toPNG(),
+    );
+    await js('document.querySelector("#table-list .table-close").click()');
     await wait('document.getElementById("confirm-action-dialog")?.open');
     await js('document.getElementById("cancel-action").click()');
     await wait('!document.getElementById("confirm-action-dialog")');
@@ -266,11 +325,16 @@ app.whenReady().then(async () => {
     await wait('document.querySelector("#table-orders .table-card") !== null');
     await win.webContents.capturePage(undefined, { stayHidden: true });
     await new Promise((resolve) => setTimeout(resolve, 200));
-    fs.writeFileSync(tablePreview, (await win.webContents.capturePage(undefined, { stayHidden: true })).toPNG());
-    await js('document.querySelector("#table-list button").click()');
+    fs.writeFileSync(
+      tablePreview,
+      (await win.webContents.capturePage(undefined, { stayHidden: true })).toPNG(),
+    );
+    await js('document.querySelector("#table-list .table-close").click()');
     await wait('document.getElementById("confirm-action-dialog")?.open');
     await js('document.getElementById("confirm-action").click()');
-    await wait('document.querySelectorAll("#table-list .table-vacant").length === 10 && !document.querySelector("#table-list button")');
+    await wait(
+      'document.querySelectorAll("#table-list .table-vacant").length === 10 && !document.querySelector("#table-list button")',
+    );
     assert.equal(tableCloses, 1);
     await js('document.getElementById("close-tables").click()');
     await js('document.getElementById("hardware").click()');
@@ -372,6 +436,19 @@ app.whenReady().then(async () => {
     await wait('!document.getElementById("print").disabled');
     assert.equal(writes.length, 10);
     assert.equal(closeRequests, 1);
+    assert.equal(writes.filter((bytes) => bytes.equals(drawerPulse())).length, 2);
+    await js(
+      'document.getElementById("close-receipt").click();document.getElementById("close-history").click();document.getElementById("hardware").click()',
+    );
+    await wait(
+      'document.getElementById("hardware-dialog").open && !document.getElementById("test-printer-text").disabled',
+    );
+    await js('document.getElementById("test-printer-text").click()');
+    await wait(
+      '!document.getElementById("test-printer-text").disabled && document.getElementById("hardware-status").textContent.includes("ส่งข้อมูล Bluetooth")',
+    );
+    assert.equal(writes.length, 11);
+    assert.ok(writes.at(-1).includes(Buffer.from('8 SIAN POS\nBASIC PRINTER TEST\n')));
     assert.equal(writes.filter((bytes) => bytes.equals(drawerPulse())).length, 2);
     console.log(
       'PASS: POS hardware, cash/transfer checkout, close-shift report, print failure recovery and today-receipt reprint without duplicate close/drawer. No real sales or hardware used.',

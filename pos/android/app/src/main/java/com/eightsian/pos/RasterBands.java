@@ -14,6 +14,8 @@ final class RasterBands {
                 if (pixels[y * 72 + x] != 0) { widths[y] = x + 1; break; }
             }
         }
+        // Restore the 0.6.18 Android framing while diagnosing printers that
+        // acknowledge Bluetooth writes without producing paper output.
         for (int top = 0; top < rows;) {
             boolean blank = widths[top] == 0;
             int end = top + 1, width = Math.max(1, widths[top]);

@@ -70,6 +70,13 @@ vm.runInContext(source, context);
   assert.ok(
     Buffer.from(writes[0].base64, 'base64').equals(Buffer.from([27, 64, 27, 112, 48, 100, 250])),
   );
+  await context.posHardware.testText();
+  assert.equal(writes.length, 3);
+  assert.ok(
+    Buffer.from(writes[2].base64, 'base64').includes(
+      Buffer.from('8 SIAN POS\nBASIC PRINTER TEST\n'),
+    ),
+  );
   console.log(
     'PASS: bundled Android bridge shares checkout hardware claims, audit events, receipt and drawer behavior',
   );

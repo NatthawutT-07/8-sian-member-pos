@@ -2,6 +2,10 @@ const $ = (id) => document.getElementById(id);
 
 export function setupHardwareUI({ products, role = () => 'USER' }) {
   const bridge = window.posHardware;
+  let receiptQr = false;
+  try {
+    receiptQr = localStorage.getItem('pos-print-qr') === 'true';
+  } catch {}
   let working = false;
   const status = (value) => {
     $('hardware-status').textContent = value;
@@ -29,16 +33,21 @@ export function setupHardwareUI({ products, role = () => 'USER' }) {
     const timing = Number.isFinite(result.totalMs)
       ? ` • ส่งข้อมูล ${(result.totalMs / 1000).toFixed(1)} วินาที`
       : '';
-    status((result.warning || 'เครื่องพิมพ์รับข้อมูลแล้ว กรุณาตรวจผลที่เครื่องจริง') + timing);
+    status((result.warning || 'ส่งข้อมูล Bluetooth ครบแล้ว กรุณาตรวจว่ามีกระดาษออกจริง') + timing);
   };
   const showSettings = ({ settings }) => {
     for (const [id, key] of [
       ['auto-print', 'autoPrint'],
+      ['print-receipt-qr', 'printQr'],
       ['auto-drawer', 'autoDrawer'],
       ['cut-paper', 'cut'],
     ])
       $(id).checked = settings[key];
     $('drawer-pin').value = String(settings.drawerPin);
+    receiptQr = settings.printQr === true;
+    try {
+      localStorage.setItem('pos-print-qr', String(receiptQr));
+    } catch {}
     $('hardware-device').textContent = settings.deviceName || 'ยังไม่ได้เลือกเครื่องพิมพ์';
   };
   $('hardware').onclick = async () => {
@@ -92,6 +101,7 @@ export function setupHardwareUI({ products, role = () => 'USER' }) {
       showSettings(
         await bridge.configure({
           autoPrint: $('auto-print').checked,
+          printQr: $('print-receipt-qr').checked,
           autoDrawer: $('auto-drawer').checked,
           cut: $('cut-paper').checked,
           drawerPin: Number($('drawer-pin').value),
@@ -100,6 +110,7 @@ export function setupHardwareUI({ products, role = () => 'USER' }) {
       status('บันทึกการตั้งค่าแล้ว');
     });
   $('test-printer').onclick = () => work(async () => sent(await bridge.testPrint()));
+  $('test-printer-text').onclick = () => work(async () => sent(await bridge.testText()));
   $('print-barcode').onclick = () =>
     work(async () => {
       if (!$('barcode-product').value) throw new Error('เลือกสินค้าที่ต้องการพิมพ์บาร์โค้ดก่อน');
@@ -107,6 +118,17 @@ export function setupHardwareUI({ products, role = () => 'USER' }) {
     });
   $('open-drawer').onclick = () =>
     work(async () => sent(await bridge.openDrawer({ reason: $('drawer-reason').value })));
+  return {
+    printQr: () => receiptQr,
+    async refreshSettings() {
+      if (!bridge) return;
+      try {
+        showSettings(await bridge.status());
+      } catch {
+        /* Login can continue while hardware is unavailable. */
+      }
+    },
+  };
 }
 
 export async function outputPaidSale(sale) {

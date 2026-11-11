@@ -167,6 +167,15 @@
         <p class="zone-description">เลือกโซนที่ลูกค้าสั่งได้ สามารถเลือกได้มากกว่า 1 โซน</p>
         <div id="zone-options" role="group" aria-label="โซนอาหารที่อนุญาต"></div>
         <p id="zone-selection" aria-live="polite"></p>
+        <label class="zone-qr-hours"
+          >อายุ QR สั่งอาหาร (ชั่วโมง)<input
+            id="zone-qr-hours"
+            type="number"
+            min="1"
+            max="168"
+            value="2"
+            required
+        /></label>
         <p data-dialog-notice role="status"></p>
         <div class="zone-actions">
           <button type="button" id="later-zones">เลือกภายหลัง</button>
@@ -174,6 +183,15 @@
         </div>
         <p class="zone-later-hint">เลือกภายหลัง: โต๊ะจะยังสั่งอาหารไม่ได้</p>
       </form>
+    </dialog>
+    <dialog id="table-qr-dialog" aria-labelledby="table-qr-title">
+      <h2 id="table-qr-title">QR สั่งอาหารรอบปัจจุบัน</h2>
+      <section id="table-qr-preview"></section>
+      <p id="table-qr-notice" role="status"></p>
+      <div class="receipt-actions">
+        <button id="print-table-qr" class="primary">พิมพ์ QR</button
+        ><button id="close-table-qr">ปิด</button>
+      </div>
     </dialog>
     <dialog id="tables-dialog" aria-labelledby="tables-title">
       <div class="tables-header">
@@ -248,6 +266,10 @@
     <dialog id="receipt-dialog">
       <section id="receipt"></section>
       <p id="receipt-notice" role="status" aria-live="polite"></p>
+      <div class="receipt-options" id="receipt-options">
+        <label><input type="checkbox" id="receipt-print-qr" /> พิมพ์ QR ใบเสร็จนี้</label>
+        <small>QR ใช้กับบิลที่เลือกโต๊ะ • ไม่ติ๊ก = ไม่พิมพ์ QR</small>
+      </div>
       <div class="receipt-actions">
         <button id="print" class="primary">พิมพ์ใบเสร็จ</button
         ><button id="close-receipt">ปิด</button>
@@ -273,6 +295,10 @@
             ><input type="checkbox" id="auto-print" />พิมพ์ใบเสร็จอัตโนมัติ</label
           >
           <label class="hardware-check"
+            ><input type="checkbox" id="print-receipt-qr" />พิมพ์ QR บนใบเสร็จอัตโนมัติ
+            (เฉพาะบิลที่เลือกโต๊ะ)</label
+          >
+          <label class="hardware-check"
             ><input type="checkbox" id="auto-drawer" />เปิดลิ้นชักเฉพาะเงินสด
             (เปิดใช้หลังทดสอบลิ้นชักสำเร็จ)</label
           >
@@ -287,7 +313,8 @@
           >
           <button id="save-hardware">บันทึกการตั้งค่า</button>
         </fieldset>
-        <button id="test-printer">พิมพ์ทดสอบภาษาไทยและบาร์โค้ด</button>
+        <button id="test-printer">พิมพ์ทดสอบภาษาไทย</button>
+        <button id="test-printer-text">ทดสอบข้อความพื้นฐาน (ไม่ใช้ภาพ)</button>
         <fieldset>
           <legend>พิมพ์บาร์โค้ดสินค้า CODE128</legend>
           <label>สินค้า<select id="barcode-product"></select></label>
