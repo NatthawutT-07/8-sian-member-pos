@@ -1,12 +1,12 @@
-# POS สำหรับ Samsung / Huawei / Android — 0.6.24
+# POS สำหรับ Samsung / Huawei / Android — 0.6.25
 
-รุ่นล่าสุดใช้ไฟล์ `pos/release/8-Sian-POS-Android-0.6.24.apk` เดียวกันทั้ง Samsung Tab A7 Lite และ Huawei ที่รองรับ Android APK ติดตั้งทับแอป POS เดิมได้ด้วย signing key เดิม รวมชำระเงินสด+โอน นับเงินเปิดกะ และหน้าครัวพร้อมพิมพ์เฉพาะเลขโต๊ะแล้ว ดู [รายละเอียดรุ่น 0.6.24](RELEASE-0.6.24.md) และอัปเดต backend/migration ก่อนใช้งานชำระผสม
+รุ่นล่าสุดใช้ไฟล์ `pos/release/8-Sian-POS-Android-0.6.25.apk` เดียวกันทั้ง Samsung Tab A7 Lite และ Huawei ที่รองรับ Android APK ติดตั้งทับแอป POS เดิมได้ด้วย signing key เดิม รวมชำระเงินสด+โอน นับเงินเปิดกะ และหน้าครัวพร้อมพิมพ์เฉพาะเลขโต๊ะแล้ว ดู [รายละเอียดรุ่น 0.6.25](RELEASE-0.6.25.md) และอัปเดต backend/migration ก่อนใช้งานชำระผสม
 
 เป้าหมาย: Huawei MatePad 11.5S รุ่น SLG-W09, HarmonyOS 4.3.0 ที่รองรับ Android APK ไม่ใช่ HarmonyOS NEXT แอปไม่ใช้ Google Play Services รองรับ Android API 26 ขึ้นไป ต้องตรวจบนแท็บเล็ตจริงก่อนใช้งานหน้าร้าน
 
 ## ติดตั้งบน MatePad
 
-1. คัดลอก `pos/release/8-Sian-POS-Android-0.6.24.apk` ไปแท็บเล็ตผ่าน USB, Huawei Share หรือช่องทางส่วนตัว ติดตั้งทับรุ่นเดิมได้ด้วย signing key เดิม ไม่ต้องถอนการติดตั้ง
+1. คัดลอก `pos/release/8-Sian-POS-Android-0.6.25.apk` ไปแท็บเล็ตผ่าน USB, Huawei Share หรือช่องทางส่วนตัว ติดตั้งทับรุ่นเดิมได้ด้วย signing key เดิม ไม่ต้องถอนการติดตั้ง
 2. เปิดไฟล์จาก Files หากระบบถาม ให้อนุญาตติดตั้งแอปจาก Files สำหรับไฟล์นี้
 3. เปิด **8 เซียน POS** แล้วเข้าสู่ระบบด้วยบัญชีพนักงาน USER สำหรับคิดเงิน หรือ CHEF สำหรับหน้าครัว จากหน้าแอดมิน ไม่ใช้บัญชีแอดมินเข้าสู่ POS
 4. แอปเชื่อม `https://api.8sianracha.com` โดยตรง ไม่ต้องตั้ง server.json และไม่ต้องอัปโหลดหน้า POS ขึ้น server

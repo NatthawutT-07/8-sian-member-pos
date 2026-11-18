@@ -20,12 +20,11 @@ ipcMain.handle('chef-print', async (event, ticket) => {
     const printers = await main.webContents.getPrintersAsync();
     const printer = printers.find((p) => p.name === 'ES-9910UB');
     if (!printer) throw new Error('ไม่พบไดรเวอร์ ES-9910UB ใน Windows');
-    output = new BrowserWindow({ show: false, width: 303, height: 100, webPreferences: { sandbox: true, nodeIntegration: false } });
-    const html = `<html lang="th"><meta charset="utf-8"><style>@page{margin:0}*{box-sizing:border-box}body{width:80mm;margin:0;padding:2mm;color:black;font-family:Tahoma,sans-serif}h2{font-size:32pt;font-weight:800;line-height:1.2;text-align:center;overflow-wrap:anywhere;margin:0}</style><h2>โต๊ะ ${escape(ticket.tableNumber)}</h2></html>`;
+    output = new BrowserWindow({ show: false, width: 303, height: 114, webPreferences: { sandbox: true, nodeIntegration: false } });
+    const html = `<html lang="th"><meta charset="utf-8"><style>@page{size:80mm 30mm;margin:0}*{box-sizing:border-box}body{width:80mm;height:30mm;display:grid;place-items:center;margin:0;padding:2mm;color:black;font-family:Tahoma,sans-serif}h2{font-size:32pt;font-weight:800;line-height:1.2;text-align:center;overflow-wrap:anywhere;margin:0}</style><h2>โต๊ะ ${escape(ticket.tableNumber)}</h2></html>`;
     await output.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
-    const height = await output.webContents.executeJavaScript('document.fonts.ready.then(() => Math.ceil(document.documentElement.scrollHeight * 25400 / 96))');
-    if (height > 500000) throw new Error('ใบอาหารยาวเกิน 500 มม.');
-    await new Promise((resolve, reject) => output.webContents.print({ silent: true, deviceName: printer.name, printBackground: true, margins: { marginType: 'none' }, pageSize: { width: 80000, height: Math.max(20000, height) } }, (ok, reason) => ok ? resolve() : reject(new Error(reason))));
+    await output.webContents.executeJavaScript('document.fonts.ready.then(() => true)');
+    await new Promise((resolve, reject) => output.webContents.print({ silent: true, deviceName: printer.name, printBackground: true, margins: { marginType: 'none' }, pageSize: { width: 80000, height: 30000 } }, (ok, reason) => ok ? resolve() : reject(new Error(reason))));
     return { warning: 'ส่งใบอาหารเข้า ES-9910UB แล้ว กรุณาตรวจที่เครื่อง' };
   } finally { output?.destroy(); printing = false; }
 });
