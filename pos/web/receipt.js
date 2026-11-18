@@ -72,9 +72,10 @@ export function renderReceipt(root, sale, { printQr = false } = {}) {
     line(`คูปอง: ${sale.couponTitle || 'ส่วนลด'}`, `−${money(sale.discountSatang)}`);
   }
   line('รวมทั้งสิ้น', `${money(sale.totalSatang)} บาท`, 'receipt-grand-total');
-  line('การชำระ', sale.method === 'CASH' ? 'เงินสด' : 'โอนเงิน');
-  if (sale.method === 'CASH') {
-    line('รับเงิน', money(sale.receivedSatang));
+  line('การชำระ', sale.method === 'MIXED' ? 'เงินสด + เงินโอน' : sale.method === 'CASH' ? 'เงินสด' : 'โอนเงิน');
+  if (sale.method === 'CASH' || sale.method === 'MIXED') {
+    if (sale.method === 'MIXED') line('เงินโอน', money(sale.transferSatang));
+    line('รับเงินสด', money(sale.receivedSatang - (sale.transferSatang || 0)));
     line('เงินทอน', money(sale.changeSatang));
   } else line('ชำระแล้ว', money(sale.totalSatang));
   if (sale.memberId) root.append(text('p', 'บันทึกสะสมการมาทาน 1 ครั้งแล้ว', 'receipt-loyalty'));

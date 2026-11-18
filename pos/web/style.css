@@ -235,6 +235,25 @@ dialog {
 dialog::backdrop {
   background: #10251bc0;
 }
+.opening-cash-counts {
+  min-width: 0;
+  padding: 12px;
+  margin: 12px 0;
+  border: 1px solid #c8cdc4;
+  border-radius: 10px;
+}
+#opening-cash-denominations {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+#opening-cash-denominations label { min-width: 0; }
+#opening-cash-denominations input {
+  min-height: 48px;
+  min-width: 0;
+  font-size: 18px;
+}
+#open-form input[readonly] { font-size: 24px; font-weight: 700; }
 .receipt-actions {
   display: flex;
   gap: 8px;
@@ -1586,4 +1605,25 @@ body.kitchen-active > header button,
   body.kitchen-print .kitchen-ticket-controls {
     display: none !important;
   }
+}
+
+/* Kitchen touch controls on compact Android tablets. */
+@media screen and (max-width: 1280px) {
+  body.kitchen-active > header { flex-wrap: wrap; gap: 8px; }
+  #kitchen { padding: 12px; min-width: 0; }
+  body.kitchen-active > header button,
+  #kitchen button, #kitchen select,
+  #kitchen-summary-dialog button, #kitchen-ticket-dialog button {
+    min-height: 48px; font-size: 16px; touch-action: manipulation;
+  }
+  #kitchen-orders {
+    grid-auto-flow: row; grid-auto-columns: auto;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    overflow-x: visible; scroll-snap-type: none;
+  }
+  .kitchen-order { min-width: 0; }
+  #kitchen .kitchen-cancel-item { min-height: 44px; font-size: 14px; }
+  .kitchen-order-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .kitchen-order-actions button { min-width: 0; }
+  .kitchen-table-tools select { min-width: 0; max-width: 100%; flex: 1 1 200px; }
 }

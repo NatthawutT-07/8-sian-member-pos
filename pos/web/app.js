@@ -4,6 +4,7 @@ import { renderShiftReport } from './shift-receipt.js';
 import { setupTableOrdering } from './table-ordering.js';
 import { setupKitchen } from './kitchen.js';
 import { renderTableQr } from './table-qr.js';
+import { setupOpeningCash } from './opening-cash.js';
 
 const $ = (id) => document.getElementById(id);
 const money = (n) =>
@@ -184,7 +185,8 @@ async function start(user) {
   }
   if (pending) {
     paymentMethod = pending.method;
-    $('received').value = (pending.receivedSatang / 100).toFixed(2);
+    $('received').value = ((pending.receivedSatang - (pending.transferSatang || 0)) / 100).toFixed(2);
+    $('transfer-received').value = ((pending.transferSatang || 0) / 100).toFixed(2);
   }
   $('login').hidden = true;
   $('register').hidden = false;
@@ -318,8 +320,10 @@ function renderCart() {
   $('total').textContent = money(displayedTotal);
   $('cart').scrollTop = scrollTop;
   if (paymentMethod === 'TRANSFER') $('received').value = (displayedTotal / 100).toFixed(2);
-  $('cash-entry').hidden = paymentMethod !== 'CASH';
-  $('transfer-note').hidden = paymentMethod !== 'TRANSFER';
+  $('cash-entry').hidden = paymentMethod === 'TRANSFER';
+  $('mixed-transfer-entry').hidden = paymentMethod !== 'MIXED';
+  $('transfer-received').disabled = busy || !!pending;
+  $('transfer-note').hidden = paymentMethod === 'CASH';
   $('received').disabled = busy || !!pending;
   $('table-select').disabled = busy || !!pending;
   $('checkout-ordering').disabled = busy || !!pending;
@@ -328,7 +332,7 @@ function renderCart() {
     button.disabled = busy || !!pending;
   }
   $('change').textContent =
-    `เงินทอน ${money(Math.max(0, Math.round(Number($('received').value) * 100) - displayedTotal))}`;
+    `เงินทอน ${money(Math.max(0, Math.round(Number($('received').value) * 100) + (paymentMethod === 'MIXED' ? Math.round(Number($('transfer-received').value) * 100) : 0) - displayedTotal))}`;
   $('pay').disabled =
     busy ||
     couponBusy ||
@@ -337,7 +341,9 @@ function renderCart() {
     (!shift && !pending);
   $('pay').textContent = pending
     ? 'ตรวจผล / ยืนยันบิลเดิมอีกครั้ง'
-    : paymentMethod === 'CASH'
+    : paymentMethod === 'MIXED'
+      ? 'ยืนยันรับเงินสดและเงินโอนและปิดบิล'
+      : paymentMethod === 'CASH'
       ? 'ยืนยันรับเงินสดและปิดบิล'
       : 'ยืนยันรับเงินโอนและปิดบิล';
 }
@@ -527,14 +533,15 @@ $('remove-coupon').onclick = run(async () => {
   if (editable()) await releaseCoupon();
 });
 $('received').oninput = renderCart;
+$('transfer-received').oninput = renderCart;
 for (const button of document.querySelectorAll('[data-payment-method]')) {
   button.onclick = () => {
     if (!editable()) return;
     const nextMethod = button.dataset.paymentMethod;
     if (nextMethod === paymentMethod) return;
-    if (paymentMethod === 'CASH') cashReceived = $('received').value;
+    if (paymentMethod !== 'TRANSFER') cashReceived = $('received').value;
     paymentMethod = nextMethod;
-    if (paymentMethod === 'CASH') $('received').value = cashReceived;
+    if (paymentMethod !== 'TRANSFER') $('received').value = cashReceived;
     renderCart();
   };
 }
@@ -549,7 +556,9 @@ $('pay').onclick = run(async () => {
   if (!pending) {
     if (!shift) throw new Error('กรุณาเปิดร้านก่อนคิดเงิน');
     if (!cart.length) return;
-    const receivedSatang = Math.round(Number($('received').value) * 100);
+    const transferSatang = paymentMethod === 'MIXED' ? Math.round(Number($('transfer-received').value) * 100) : 0;
+    if (paymentMethod === 'MIXED' && (!Number.isSafeInteger(transferSatang) || transferSatang <= 0 || transferSatang >= total() || Number($('received').value) <= 0)) throw new Error('กรอกยอดโอนมากกว่า 0 และน้อยกว่ายอดบิล พร้อมเงินสดที่รับ');
+    const receivedSatang = Math.round(Number($('received').value) * 100) + transferSatang;
     if (!Number.isSafeInteger(receivedSatang) || receivedSatang < total())
       throw new Error('กรุณากรอกยอดรับเงินให้ครบ');
     if (couponIssue() || total() < 0) throw new Error(couponIssue() || 'ส่วนลดเกินยอดสินค้า');
@@ -562,6 +571,7 @@ $('pay').onclick = run(async () => {
       items: cart.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
       method: paymentMethod,
       receivedSatang,
+      ...(paymentMethod === 'MIXED' ? { transferSatang } : {}),
       expectedTotalSatang: total(),
       ...(memberSelection || {}),
       ...(draft.coupon ? { couponReservationId: draft.coupon.reservationId } : {}),
@@ -591,6 +601,7 @@ $('pay').onclick = run(async () => {
     cart = [];
     clearMember();
     $('received').value = '';
+    $('transfer-received').value = '';
     cashReceived = '';
     paymentMethod = 'CASH';
     receipt(sale, printQr);
@@ -751,8 +762,16 @@ async function refreshShift() {
   return state;
 }
 let closingShiftId = null;
+const openingCash = setupOpeningCash(
+  $('open-form'),
+  $('opening-cash-denominations'),
+  $('open-form').elements.openingCash,
+);
 $('open-store').onclick = () => {
-  if (editable()) $('open-dialog').showModal();
+  if (!editable()) return;
+  const request = JSON.parse(localStorage.getItem('pos-open-request') || 'null');
+  if (request) openingCash.restore(request);
+  $('open-dialog').showModal();
 };
 $('cancel-open').onclick = () => $('open-dialog').close();
 $('open-form').onsubmit = run(async (event) => {
@@ -761,6 +780,8 @@ $('open-form').onsubmit = run(async (event) => {
   try {
     const data = new FormData(event.target);
     const openingCashSatang = Math.round(Number(data.get('openingCash')) * 100);
+    if (!Number.isSafeInteger(openingCashSatang) || openingCashSatang < 0 || openingCashSatang > 100000000 || data.get('openingCash') === '')
+      throw new Error('กรุณาตรวจจำนวนธนบัตรและเหรียญก่อนเปิดร้าน');
     let request = JSON.parse(localStorage.getItem('pos-open-request') || 'null');
     if (
       request &&
@@ -768,13 +789,14 @@ $('open-form').onsubmit = run(async (event) => {
     )
       throw new Error('มีคำขอเปิดร้านค้าง กรุณาใช้บัญชีและยอดเงินตั้งต้นเดิม');
     if (!request) {
-      request = { key: crypto.randomUUID(), openingCashSatang, userId: activeUserId };
+      request = { key: crypto.randomUUID(), openingCashSatang, openingCashCounts: openingCash.counts(), userId: activeUserId };
       localStorage.setItem('pos-open-request', JSON.stringify(request));
     }
     await api('shift/open', { key: request.key, openingCashSatang: request.openingCashSatang });
     localStorage.removeItem('pos-open-request');
     $('open-dialog').close();
     event.target.reset();
+    openingCash.reset();
     await refreshShift();
     notice('เปิดร้านเรียบร้อย เริ่มคิดเงินได้');
   } finally {

@@ -226,11 +226,11 @@ function createHardware({ request, transport, render, readSettings, saveSettings
       const errors = [],
         warnings = [];
       let drawerSent = false;
-      if (sale.method === 'CASH' && !config.autoDrawer)
+      if ((sale.method === 'CASH' || sale.method === 'MIXED') && !config.autoDrawer)
         warnings.push('ยังไม่ได้เปิดลิ้นชัก: ปิดตัวเลือกเปิดลิ้นชักเฉพาะเงินสดไว้ในเมนูอุปกรณ์');
-      if (sale.method !== 'CASH') warnings.push('บิลนี้บันทึกเป็นเงินโอน จึงไม่สั่งเปิดลิ้นชัก');
+      if (sale.method === 'TRANSFER') warnings.push('บิลนี้บันทึกเป็นเงินโอน จึงไม่สั่งเปิดลิ้นชัก');
       // Open after the durable paid sale, independently of a later printing failure.
-      if (config.autoDrawer && claim.cash && sale.method === 'CASH') {
+      if (config.autoDrawer && claim.cash && (sale.method === 'CASH' || sale.method === 'MIXED')) {
         try {
           const result = await transmit(
             'OPEN_DRAWER',

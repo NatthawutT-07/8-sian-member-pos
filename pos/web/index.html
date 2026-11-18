@@ -159,11 +159,13 @@
               <button type="button" data-payment-method="TRANSFER" aria-pressed="false">
                 โอนเงิน
               </button>
+              <button type="button" data-payment-method="MIXED" aria-pressed="false">เงินสด + เงินโอน</button>
             </div>
           </fieldset>
+          <div id="mixed-transfer-entry" hidden><label>เงินโอนที่ได้รับ (บาท)<input id="transfer-received" type="number" min="0" step="0.01" inputmode="decimal" /></label></div>
           <div class="cash-entry" id="cash-entry">
             <label
-              >รับเงิน (บาท)<input
+              >เงินสดที่รับ (บาท)<input
                 id="received"
                 type="number"
                 min="0"
@@ -248,9 +250,16 @@
     <dialog id="open-dialog">
       <form id="open-form">
         <h2>เปิดร้าน</h2>
+        <p class="hint">กรอกจำนวนธนบัตรและเหรียญ ระบบรวมเงินสดตั้งต้นให้อัตโนมัติ ช่องว่างนับเป็น 0</p>
+        <fieldset class="opening-cash-counts">
+          <legend>จำนวนธนบัตร / เหรียญ</legend>
+          <div id="opening-cash-denominations"></div>
+        </fieldset>
         <label
-          >เงินสดตั้งต้น (บาท)<input
+          >รวมเงินสดตั้งต้น (บาท)<input
             name="openingCash"
+            readonly
+            aria-live="polite"
             type="number"
             min="0"
             max="1000000"
