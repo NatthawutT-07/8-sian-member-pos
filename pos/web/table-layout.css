@@ -1,0 +1,45 @@
+/* Compact checkout permissions and stable, fully readable table cards. */
+@media screen {
+  #checkout-ordering.checkout-ordering-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; padding: 6px 8px; margin: 0 0 8px; min-width: 0; }
+  #checkout-ordering.checkout-ordering-summary[hidden] { display: none; }
+  #checkout-ordering legend { font-size: 11px; padding: 0 3px; }
+  #checkout-ordering-summary { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; align-self: center; }
+  #checkout-ordering #edit-checkout-ordering { min-height: 32px; padding: 4px 8px; }
+  .compact-ordering-dialog, #zone-dialog { width: min(94vw, 460px); padding: 14px; font-size: 14px; box-sizing: border-box; }
+  .compact-ordering-dialog h2, #zone-dialog h2 { font-size: 19px; margin: 0 0 8px; }
+  .compact-ordering-dialog p, #zone-dialog p { margin: 6px 0; line-height: 1.5; }
+  .compact-ordering-dialog button, #zone-dialog button { min-height: 40px; padding: 7px 10px; font-size: 14px; }
+  .compact-ordering-dialog input[type='number'], #zone-dialog input[type='number'] { width: 100px; min-height: 40px; padding: 6px; font-size: 16px; }
+  .compact-ordering-dialog .compact-check, .compact-ordering-dialog .checkout-qr-choice, #zone-dialog .compact-check { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; }
+  .compact-ordering-dialog input[type='checkbox'], #zone-dialog input[type='checkbox'] { width: 18px; height: 18px; min-height: 18px; flex: 0 0 18px; margin: 0; }
+  .compact-ordering-dialog #checkout-zone-options, #default-zone-options, #zone-dialog #zone-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 8px 0; }
+  .compact-ordering-dialog #checkout-zone-options label, #default-zone-options label, #zone-dialog #zone-options label { display: flex; align-items: center; gap: 7px; min-width: 0; margin: 0; padding: 7px; border: 1px solid #dbe2d7; border-radius: 6px; font-size: 13px; }
+  .compact-ordering-dialog label span, #zone-dialog label span { overflow-wrap: anywhere; }
+  #zone-dialog .zone-step, #zone-dialog .zone-later-hint { display: none; }
+  #zone-dialog .zone-heading { margin-bottom: 8px; }
+  #tables-dialog { box-sizing: border-box; width: min(1180px, 96vw); height: min(90dvh, 800px); max-height: 90dvh; padding: 14px; overflow: hidden; }
+  #tables-dialog[open] { display: flex; flex-direction: column; }
+  #tables-dialog .tables-header { flex-shrink: 0; gap: 8px; }
+  #tables-dialog .tables-header h2 { font-size: 20px; }
+  #tables-dialog .tables-toolbar { flex-wrap: wrap; }
+  #tables-dialog #ordering-status { min-height: 1.5em; margin: 6px 0; font-size: 12px; flex-shrink: 0; }
+  #tables-dialog .tables-content { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 14px; }
+  #tables-dialog .tables-content > section { min-width: 0; min-height: 0; max-height: none; overflow: auto; scrollbar-gutter: stable; }
+  #tables-dialog #table-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); align-items: stretch; gap: 8px; margin: 8px 0; }
+  #tables-dialog #table-list .dining-table { min-width: 0; min-height: 250px; padding: 10px; gap: 5px; overflow: visible; align-items: stretch; }
+  #tables-dialog .dining-table .table-number { font-size: 26px; line-height: 1.25; white-space: normal; overflow-wrap: anywhere; }
+  #tables-dialog .dining-table .table-state { display: flex; align-items: center; justify-content: center; box-sizing: border-box; min-height: 3.5em; padding: 4px; font-size: 12px; line-height: 1.4; white-space: normal; }
+  #tables-dialog .table-times { grid-template-columns: 60px minmax(0, 1fr); gap: 5px; margin: 4px 0; font-size: 11px; line-height: 1.5; }
+  #tables-dialog .table-times dd { white-space: normal; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  #tables-dialog .table-time-remaining { font-size: 16px; min-height: 24px; line-height: 1.5; }
+  #tables-dialog .dining-table .table-zones { max-height: none; overflow: visible; font-size: 12px; line-height: 1.5; margin: 3px 0; white-space: normal; }
+  #tables-dialog .table-card-actions { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-top: auto; }
+  #tables-dialog .table-card-actions button { font-size: 12px; min-height: 36px; padding: 5px 8px; margin: 0; }
+  #tables-dialog #table-orders { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 0; }
+  #table-orders .table-card { min-width: 0; }
+  #table-orders .table-card p, #table-orders .table-card h3 { white-space: normal; overflow-wrap: anywhere; }
+}
+@media screen and (max-width: 820px) {
+  #tables-dialog .tables-content { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1.4fr) minmax(0, 1fr); }
+  #tables-dialog .table-orders-panel { border-left: 0; border-top: 1px solid #dbe2d7; padding: 8px 0 0; }
+}

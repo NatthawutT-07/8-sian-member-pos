@@ -69,7 +69,7 @@ function createHardware({ request, transport, render, readSettings, saveSettings
     if (printQr && sale.tableId && sale.tableSessionId) {
       try {
         const qr = await request(`tables/${sale.tableId}/qr`, { sessionId: sale.tableSessionId });
-        sale = { ...sale, orderingUrl: qr.url, orderingExpiresAt: qr.qrExpiresAt };
+        sale = { ...sale, orderingUrl: qr.url, orderingExpiresAt: qr.qrExpiresAt, orderingUnlimited: qr.qrUnlimited === true };
       } catch {
         printQr = false;
         qrWarning = 'ไม่ได้พิมพ์ QR: กรุณาเปิดโซนโต๊ะและตรวจอายุ QR ก่อน';

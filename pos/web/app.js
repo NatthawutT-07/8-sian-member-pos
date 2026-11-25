@@ -126,6 +126,7 @@ async function showTableQr(qr, automatic, tableId) {
   if (currentReceipt?.tableId === tableId && currentReceipt.tableSessionId === qr.sessionId) {
     currentReceipt.orderingUrl = qr.url;
     currentReceipt.orderingExpiresAt = qr.qrExpiresAt;
+    currentReceipt.orderingUnlimited = qr.qrUnlimited === true;
     renderReceipt($('receipt'), currentReceipt, { printQr: $('receipt-print-qr').checked });
   }
   $('table-qr-notice').textContent = '';
@@ -831,6 +832,7 @@ async function previewReceiptQr() {
       if (currentReceipt !== sale) return;
       sale.orderingUrl = qr.url;
       sale.orderingExpiresAt = qr.qrExpiresAt;
+      sale.orderingUnlimited = qr.qrUnlimited === true;
     } catch (error) {
       $('receipt-notice').textContent = error.message;
     }

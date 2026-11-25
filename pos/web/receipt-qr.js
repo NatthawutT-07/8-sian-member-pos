@@ -1,7 +1,7 @@
 import { create } from './vendor/qrcode.js';
 
 export function receiptCode(sale) {
-  return sale.orderingUrl && new Date(sale.orderingExpiresAt).getTime() > Date.now()
+  return sale.orderingUrl && (sale.orderingUnlimited === true || new Date(sale.orderingExpiresAt).getTime() > Date.now())
     ? sale.orderingUrl
     : null;
 }
@@ -44,7 +44,7 @@ export function renderReceiptQr(doc, sale) {
   const block = doc.createElement('div');
   block.className = 'receipt-qr';
   const label = doc.createElement('p');
-  label.textContent = `สแกนสั่งอาหาร • ใช้ได้ถึง ${new Date(sale.orderingExpiresAt).toLocaleString('th-TH')}`;
+  label.textContent = sale.orderingUnlimited === true ? 'สแกนสั่งอาหาร • ใช้ได้จนกว่าจะปิดโต๊ะ' : `สแกนสั่งอาหาร • ใช้ได้ถึง ${new Date(sale.orderingExpiresAt).toLocaleString('th-TH')}`;
   block.append(svg, label);
   return block;
 }

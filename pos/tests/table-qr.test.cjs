@@ -34,4 +34,6 @@ test('table QR slip requires a current URL and expiry and includes the round dea
     { ...qr, url: null },
   ])
     assert.throws(() => renderTableQr(root, invalid), /หมดอายุ/);
+  renderTableQr(root, { ...qr, qrExpiresAt: null, qrUnlimited: true });
+  assert.match(root.children[2].textContent, /ไม่จำกัดเวลา/);
 });

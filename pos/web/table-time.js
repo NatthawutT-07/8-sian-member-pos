@@ -1,5 +1,7 @@
 export function tableTiming(table, now = Date.now()) {
   if (!table.sessionId) return { state: 'vacant', label: 'ว่าง', remaining: '—' };
+  if (table.orderingEnabled && table.qrUnlimited === true && table.qrExpiresAt == null)
+    return { state: 'active', label: 'เปิดสั่งอาหาร', remaining: 'ไม่จำกัดเวลา' };
   const end = table.qrExpiresAt ? new Date(table.qrExpiresAt).getTime() : NaN;
   if ((Number.isFinite(end) && end <= now) || (table.orderingEnabled && !Number.isFinite(end)))
     return { state: 'expired', label: 'หมดเวลา • รอปิดโต๊ะ', remaining: '00:00:00' };

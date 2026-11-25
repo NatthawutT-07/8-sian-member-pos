@@ -10,6 +10,7 @@
     <title>8 เซียน POS</title>
     <link rel="stylesheet" href="./style.css" />
     <link rel="stylesheet" href="./cashier-layout.css" />
+    <link rel="stylesheet" href="./table-layout.css" />
     <script src="./app.js" type="module"></script>
   </head>
   <body>
@@ -21,7 +22,7 @@
         ><button id="tables" hidden>โต๊ะ / ออเดอร์อาหาร</button
         ><button id="logout">ออกจากระบบ</button>
         <button id="recover-payments" hidden>บิลรอตรวจ</button>
-        <button id="reset-terminal" type="button">ล้างตะกร้า / เข้าสู่ระบบใหม่</button>
+        <button id="reset-terminal" type="button">ออกจากระบบ</button>
       </nav>
     </header>
     <p id="notice" role="status" aria-live="polite"></p>
@@ -149,22 +150,10 @@
         <div id="cart" role="region" aria-label="รายการสินค้าในบิล" tabindex="0"></div>
         <div class="checkout-footer">
           <div class="total"><span>ยอดชำระ</span><strong id="total">฿0.00</strong></div>
-          <fieldset id="checkout-ordering" hidden>
-            <legend>สิทธิ์สั่งอาหารของโต๊ะ</legend>
-            <p class="hint">เลือกโซนตามรายการที่ลูกค้าซื้อ เลือกได้มากกว่า 1 โซน</p>
-            <div id="checkout-zone-options" role="group" aria-label="โซนอาหารก่อนชำระเงิน"></div>
-            <label
-              >อายุ QR (ชั่วโมง)<input
-                id="checkout-qr-hours"
-                type="number"
-                min="1"
-                max="168"
-                value="2"
-            /></label>
-            <label class="checkout-qr-choice"
-              ><input id="checkout-print-qr" type="checkbox" />พิมพ์ QR สั่งอาหารท้ายใบเสร็จ</label
-            >
-            <p id="checkout-zone-status" class="hint" role="status"></p>
+          <fieldset id="checkout-ordering" hidden class="checkout-ordering-summary">
+            <legend>สิทธิ์สั่งอาหาร</legend>
+            <span id="checkout-ordering-summary">กำลังโหลด…</span>
+            <button id="edit-checkout-ordering" type="button">แก้ไข</button>
           </fieldset>
           <fieldset class="payment-methods">
             <legend>วิธีชำระเงิน</legend>
@@ -194,6 +183,40 @@
         </div>
       </aside>
     </main>
+    <dialog id="checkout-ordering-dialog" class="compact-ordering-dialog">
+          <div class="compact-ordering-options">
+            <h2>สิทธิ์สั่งอาหารของโต๊ะ</h2>
+            <p class="hint">เลือกโซนตามรายการที่ลูกค้าซื้อ เลือกได้มากกว่า 1 โซน</p>
+            <div id="checkout-zone-options" role="group" aria-label="โซนอาหารก่อนชำระเงิน"></div>
+            <label
+              >อายุ QR (ชั่วโมง)<input
+                id="checkout-qr-hours"
+                type="number"
+                min="1"
+                max="168"
+                value="2"
+            /></label>
+            <label class="checkout-qr-choice"><input id="checkout-qr-unlimited" type="checkbox" />ไม่จำกัดเวลา (จนกว่าจะปิดโต๊ะ)</label>
+            <label class="checkout-qr-choice"
+              ><input id="checkout-print-qr" type="checkbox" />พิมพ์ QR สั่งอาหารท้ายใบเสร็จ</label
+            >
+            <p id="checkout-zone-status" class="hint" role="status"></p>
+          </div>
+
+      <button type="button" id="confirm-checkout-ordering" class="primary">ใช้สิทธิ์นี้</button>
+    </dialog>
+    <dialog id="table-defaults-dialog" class="compact-ordering-dialog">
+      <form id="table-defaults-form">
+        <h2>ค่าเริ่มต้นโต๊ะ · เครื่องนี้</h2>
+        <p class="hint">ใช้กับโต๊ะที่เลือกในบิลถัดไป ไม่เปลี่ยนโต๊ะที่เปิดอยู่</p>
+        <div id="default-zone-options" class="compact-zone-options" role="group" aria-label="โซนเริ่มต้น"></div>
+        <label>อายุ QR (ชั่วโมง)<input id="default-qr-hours" type="number" min="1" max="168" value="2" required /></label>
+        <label class="compact-check"><input id="default-qr-unlimited" type="checkbox" />ไม่จำกัดเวลาจนกว่าจะปิดโต๊ะ</label>
+        <label class="compact-check"><input id="default-print-qr" type="checkbox" />พิมพ์ QR ท้ายใบเสร็จเป็นค่าเริ่มต้น</label>
+        <p id="table-defaults-status" role="status"></p>
+        <div class="zone-actions"><button type="button" id="close-table-defaults">ยกเลิก</button><button class="primary">บันทึกค่าเริ่มต้น</button></div>
+      </form>
+    </dialog>
     <dialog id="zone-dialog" aria-labelledby="zone-title">
       <form id="zone-form">
         <div class="zone-heading">
@@ -204,6 +227,7 @@
         <p class="zone-description">เลือกโซนที่ลูกค้าสั่งได้ สามารถเลือกได้มากกว่า 1 โซน</p>
         <div id="zone-options" role="group" aria-label="โซนอาหารที่อนุญาต"></div>
         <p id="zone-selection" aria-live="polite"></p>
+        <label class="compact-check"><input id="zone-qr-unlimited" type="checkbox" />ไม่จำกัดเวลาจนกว่าจะปิดโต๊ะ</label>
         <label class="zone-qr-hours"
           >อายุ QR สั่งอาหาร (ชั่วโมง)<input
             id="zone-qr-hours"
@@ -234,6 +258,7 @@
       <div class="tables-header">
         <h2 id="tables-title">โต๊ะและรายการสั่งอาหาร</h2>
         <div class="tables-toolbar">
+          <button id="table-defaults" type="button">ตั้งค่าเริ่มต้น</button>
           <button id="refresh-tables">โหลดข้อมูลใหม่</button>
           <button id="close-tables">ปิดหน้าต่าง</button>
         </div>
