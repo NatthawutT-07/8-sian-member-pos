@@ -104,7 +104,7 @@
           <button type="button" data-group="PROMOTION" aria-pressed="false">โปรโมชั่น</button>
         </div>
         <div id="products" class="products"></div>
-        <section class="catalog-tools" aria-label="สมาชิกและคูปอง">
+        <section class="catalog-tools" aria-label="เบอร์สมาชิก">
           <div class="member-row">
             <div class="member-details">
               <p id="member">ลูกค้าทั่วไป</p>
@@ -115,13 +115,15 @@
           <form id="scan-form">
             <input
               id="scan"
-              placeholder="เบอร์สมาชิก / QR สมาชิก / QR ใบเสร็จ / สินค้า"
-              aria-label="เบอร์โทรสมาชิก QR สมาชิก QR ใบเสร็จ หรือบาร์โค้ดสินค้า"
+              type="tel"
+              inputmode="tel"
+              placeholder="กรอกเบอร์สมาชิก"
+              aria-label="เบอร์โทรสมาชิก"
               autocomplete="off"
-              maxlength="200"
-            /><button>เพิ่ม / ค้นหา</button>
+              maxlength="20"
+            /><button>ค้นหาสมาชิก</button>
           </form>
-          <form id="coupon-form">
+          <form id="coupon-form" hidden>
             <input
               id="coupon-code"
               placeholder="กรอกหรือยิงบาร์โค้ดคูปองส่วนลด"

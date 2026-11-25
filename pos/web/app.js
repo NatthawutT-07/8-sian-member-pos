@@ -545,25 +545,10 @@ for (const button of document.querySelectorAll('[data-group]'))
   };
 $('scan-form').onsubmit = run(async () => {
   if (scanning) return;
-  const code = $('scan').value.trim();
+  const code = $('scan').value.trim().replace(/[\s-]/g, '');
   if (!code) return;
-  if (/^8SR-[a-zA-Z0-9-]{1,100}$/.test(code)) {
-    scanning = true;
-    try {
-      const sale = await api(`sales/${code.slice(4)}`);
-      $('scan').value = '';
-      receipt(sale);
-    } finally {
-      scanning = false;
-    }
-    return;
-  }
+  if (!/^0[689]\d{8}$/.test(code)) throw new Error('กรุณากรอกเบอร์โทรสมาชิก 10 หลัก');
   if (!editable()) return;
-  if (/^88\d{30}$/.test(code)) {
-    $('scan').value = '';
-    await applyCoupon(code);
-    return;
-  }
   scanning = true;
   const button = $('scan-form').querySelector('button');
   button.disabled = true;
@@ -571,7 +556,7 @@ $('scan-form').onsubmit = run(async () => {
     const result = await api('scan', { code });
     if (!editable()) return;
     $('scan').value = '';
-    if (result.type === 'PRODUCT') add(result.product);
+    if (result.type !== 'MEMBER') throw new Error('ไม่พบสมาชิกจากเบอร์โทรนี้');
     else {
       memberCandidate = result;
       $('member-candidate').textContent =
