@@ -55,7 +55,7 @@ public final class MainActivity extends Activity {
                 String file = Uri.decode(url.substring(LOCAL.length()));
                 if (!file.matches("[a-zA-Z0-9_./-]+") || file.contains("..")) return emptyResponse();
                 try {
-                    String mime = file.endsWith(".js") ? "application/javascript" : file.endsWith(".css") ? "text/css" : file.endsWith(".png") ? "image/png" : file.endsWith(".html") ? "text/html" : "application/octet-stream";
+                    String mime = file.endsWith(".js") ? "application/javascript" : file.endsWith(".css") ? "text/css" : file.endsWith(".wav") ? "audio/wav" : file.endsWith(".png") ? "image/png" : file.endsWith(".html") ? "text/html" : "application/octet-stream";
                     WebResourceResponse response = new WebResourceResponse(mime, "UTF-8", getAssets().open(file));
                     java.util.Map<String, String> headers = new java.util.HashMap<>();
                     headers.put("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'");

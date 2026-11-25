@@ -3,6 +3,24 @@ const assert = require('node:assert/strict');
 const http = require('node:http');
 const { apiOrigin, createApiClient } = require('../desktop/api-client.cjs');
 
+test('a late 401 from the previous session cannot clear a new login cookie', async () => {
+  let reply, logins = 0, lastCookie;
+  const response = (status, cookie) => ({ status, ok: status === 200, headers: { getSetCookie: () => cookie ? [cookie] : [] }, json: async () => ({}) });
+  const client = createApiClient('https://example.com', async (url, options) => {
+    if (url.endsWith('/login')) return response(200, `pos_session=session-${++logins}`);
+    if (url.endsWith('/old-request')) return new Promise((resolve) => { reply = resolve; });
+    lastCookie = options.headers.Cookie;
+    return response(200);
+  });
+  await client('login', {});
+  const old = client('old-request');
+  await client('login', {});
+  reply(response(401));
+  await old;
+  await client('me');
+  assert.equal(lastCookie, 'pos_session=session-2');
+});
+
 test('production API default, legacy config and insecure URL rejection', () => {
   assert.equal(apiOrigin({}), 'https://api.8sianracha.com');
   assert.equal(apiOrigin({ url: 'https://api.8sianracha.com/pos/' }), 'https://api.8sianracha.com');

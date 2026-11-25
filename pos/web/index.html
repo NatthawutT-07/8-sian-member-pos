@@ -20,6 +20,8 @@
         ><button id="history">บิลวันนี้</button><button id="hardware" hidden>อุปกรณ์</button
         ><button id="tables" hidden>โต๊ะ / ออเดอร์อาหาร</button
         ><button id="logout">ออกจากระบบ</button>
+        <button id="recover-payments" hidden>บิลรอตรวจ</button>
+        <button id="reset-terminal" type="button">ล้างตะกร้า / เข้าสู่ระบบใหม่</button>
       </nav>
     </header>
     <p id="notice" role="status" aria-live="polite"></p>
@@ -51,6 +53,11 @@
         </div>
         <button id="kitchen-refresh">โหลดออเดอร์ใหม่</button>
       </div>
+      <div class="kitchen-sound-controls">
+        <button id="kitchen-sound" type="button" aria-pressed="false">เปิดเสียงออเดอร์</button>
+        <button id="kitchen-test-sound" type="button">ทดสอบเสียง</button>
+        <span id="kitchen-sound-status" class="hint" role="status"></span>
+      </div>
       <div class="kitchen-table-tools">
         <select id="kitchen-table" aria-label="โต๊ะสำหรับดูยอดสั่งสะสม"></select
         ><button id="kitchen-summary">ดูยอดอาหารที่สำเร็จแล้ว</button>
@@ -61,6 +68,13 @@
         aria-label="ออเดอร์รอทำ เรียงจากเก่าไปใหม่ เลื่อนซ้ายขวาเพื่อดูออเดอร์"
       ></section>
     </main>
+    <dialog id="payment-recovery-dialog" aria-labelledby="payment-recovery-title">
+      <h2 id="payment-recovery-title">ตรวจผลบิลเดิม</h2>
+      <p>บิลเหล่านี้แยกออกจากตะกร้าแล้ว กรุณาตรวจผลก่อนรับเงินซ้ำ บิลที่ชำระสำเร็จจะไม่ถูกลบ</p>
+      <p id="payment-recovery-status" role="status"></p>
+      <div id="payment-recovery-list"></div>
+      <button type="button" id="close-payment-recovery">ปิด</button>
+    </dialog>
     <dialog id="kitchen-summary-dialog">
       <h2 id="kitchen-summary-title">อาหารที่สำเร็จแล้ว</h2>
       <p id="kitchen-summary-meta"></p>
@@ -247,13 +261,13 @@
       <button id="confirm-member" class="primary">ยืนยันใช้สมาชิกกับบิลนี้</button>
       <button id="cancel-member" type="button">ยกเลิก</button>
     </dialog>
-    <dialog id="open-dialog">
+    <dialog id="open-dialog" class="cash-count-dialog">
       <form id="open-form">
         <h2>เปิดร้าน</h2>
         <p class="hint">กรอกจำนวนธนบัตรและเหรียญ ระบบรวมเงินสดตั้งต้นให้อัตโนมัติ ช่องว่างนับเป็น 0</p>
-        <fieldset class="opening-cash-counts">
+        <fieldset class="cash-counts">
           <legend>จำนวนธนบัตร / เหรียญ</legend>
-          <div id="opening-cash-denominations"></div>
+          <div id="opening-cash-denominations" class="cash-denominations"></div>
         </fieldset>
         <label
           >รวมเงินสดตั้งต้น (บาท)<input
@@ -270,13 +284,20 @@
         ><button type="button" id="cancel-open">ยกเลิก</button>
       </form>
     </dialog>
-    <dialog id="close-dialog">
+    <dialog id="close-dialog" class="cash-count-dialog">
       <form id="close-form">
         <h2>ปิดร้าน</h2>
         <p id="closing-summary"></p>
+        <p class="hint">กรอกจำนวนธนบัตรและเหรียญที่นับได้จริง ระบบรวมยอดให้อัตโนมัติ ช่องว่างนับเป็น 0</p>
+        <fieldset class="cash-counts">
+          <legend>จำนวนธนบัตร / เหรียญ</legend>
+          <div id="closing-cash-denominations" class="cash-denominations"></div>
+        </fieldset>
         <label
-          >เงินสดที่นับได้จริง (บาท)<input
+          >รวมเงินสดที่นับได้จริง (บาท)<input
             name="countedCash"
+            readonly
+            aria-live="polite"
             type="number"
             min="0"
             max="1000000"

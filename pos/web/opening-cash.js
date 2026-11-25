@@ -1,4 +1,4 @@
-export const cashDenominations = [1000, 500, 100, 50, 10, 5, 2, 1];
+export const cashDenominations = [1000, 500, 100, 50, 20, 10, 5, 2, 1];
 
 export function openingCashTotal(counts) {
   let total = 0;
@@ -11,11 +11,11 @@ export function openingCashTotal(counts) {
     total += denomination * count * 100;
   }
   if (!Number.isSafeInteger(total) || total > 100000000)
-    throw new Error('เงินสดตั้งต้นต้องไม่เกิน 1,000,000 บาท');
+    throw new Error('ยอดเงินสดต้องไม่เกิน 1,000,000 บาท');
   return total;
 }
 
-export function setupOpeningCash(form, container, totalInput) {
+export function setupCashCount(form, container, totalInput) {
   for (const denomination of cashDenominations) {
     const label = document.createElement('label');
     label.textContent = `${denomination.toLocaleString('th-TH')} บาท`;
@@ -34,6 +34,8 @@ export function setupOpeningCash(form, container, totalInput) {
   const counts = () => Object.fromEntries(cashDenominations.map((value) => [value, form.elements[`cashCount${value}`].value]));
   const update = () => {
     try {
+      if ([...container.querySelectorAll('input')].some((input) => input.validity.badInput))
+        throw new Error('กรุณากรอกจำนวนธนบัตรหรือเหรียญให้ถูกต้อง');
       const total = openingCashTotal(counts());
       totalInput.value = (total / 100).toFixed(2);
       container.querySelector('input').setCustomValidity('');
@@ -55,6 +57,7 @@ export function setupOpeningCash(form, container, totalInput) {
         // Older pending requests stored only the total; keep their exact retry amount.
         for (const value of cashDenominations) form.elements[`cashCount${value}`].value = '';
         totalInput.value = (request.openingCashSatang / 100).toFixed(2);
+        container.querySelector('input').setCustomValidity('');
       }
     },
   };

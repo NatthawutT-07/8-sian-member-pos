@@ -8,12 +8,17 @@ window.__posNativeResult = (id, result) => {
   const job = pending.get(id);
   if (!job) return;
   pending.delete(id);
+  clearTimeout(job.timer);
   result.ok ? job.resolve(result.value) : job.reject(new Error(result.error));
 };
 function native(action, input = {}) {
   return new Promise((resolve, reject) => {
     const id = ++sequence;
-    pending.set(id, { resolve, reject });
+    const timer = setTimeout(() => {
+      pending.delete(id);
+      reject(new Error('อุปกรณ์ตอบกลับช้าเกินไป กรุณาตรวจผลก่อนลองอีกครั้ง'));
+    }, action === 'api' ? 25000 : 90000);
+    pending.set(id, { resolve, reject, timer });
     window.PosNative.postMessage(JSON.stringify({ id, action, input }));
   });
 }

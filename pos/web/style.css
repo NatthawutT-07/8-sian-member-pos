@@ -235,25 +235,42 @@ dialog {
 dialog::backdrop {
   background: #10251bc0;
 }
-.opening-cash-counts {
+.cash-count-dialog { width: min(95vw, 880px); }
+.cash-counts {
   min-width: 0;
-  padding: 12px;
-  margin: 12px 0;
+  padding: 8px;
+  margin: 8px 0;
   border: 1px solid #c8cdc4;
   border-radius: 10px;
 }
-#opening-cash-denominations {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 14px;
+.cash-denominations {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-bottom: 6px;
 }
-#opening-cash-denominations label { min-width: 0; }
-#opening-cash-denominations input {
-  min-height: 48px;
+.cash-denominations label {
+  flex: 1 0 66px;
   min-width: 0;
-  font-size: 18px;
+  margin: 0;
+  font-size: 12px;
+  text-align: center;
 }
-#open-form input[readonly] { font-size: 24px; font-weight: 700; }
+.cash-denominations input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  min-width: 0;
+  margin: 3px 0 0;
+  padding: 6px;
+  font-size: 16px;
+  text-align: center;
+}
+.cash-count-dialog input[readonly] { font-size: 22px; font-weight: 700; }
+.payment-recovery-row { padding: 12px 0; border-bottom: 1px solid #ded8c9; }
+.payment-recovery-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.payment-recovery-actions button { min-height: 44px; }
 .receipt-actions {
   display: flex;
   gap: 8px;
@@ -1370,6 +1387,7 @@ body.kitchen-active > header button,
   flex-wrap: wrap;
   margin-bottom: 12px;
 }
+.kitchen-sound-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
 .kitchen-toolbar h1 {
   margin: 4px 0;
   font-size: 24px;

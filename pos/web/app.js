@@ -4,7 +4,9 @@ import { renderShiftReport } from './shift-receipt.js';
 import { setupTableOrdering } from './table-ordering.js';
 import { setupKitchen } from './kitchen.js';
 import { renderTableQr } from './table-qr.js';
-import { setupOpeningCash } from './opening-cash.js';
+import { setupCashCount } from './opening-cash.js';
+import { archivePayment, recoveryPayments, forgetRecovery, withDeadline } from './payment-store.js';
+import { confirmAction } from './confirm-action.js';
 
 const $ = (id) => document.getElementById(id);
 const money = (n) =>
@@ -33,10 +35,12 @@ let products = [],
   pending = null,
   currentReceipt = null,
   currentShiftReport = null;
+let sessionEpoch = 0, sessionTimer = null, sessionHeartbeat = null, loginBusy = false;
 const hardwareUI = setupHardwareUI({ products: () => products, role: () => activeRole });
 try {
   pending = JSON.parse(localStorage.getItem('pos-pending') || 'null');
 } catch {
+  try { localStorage.setItem('pos-invalid-payment-backup', localStorage.getItem('pos-pending')); } catch {}
   localStorage.removeItem('pos-pending');
 }
 function notice(message = '') {
@@ -44,21 +48,25 @@ function notice(message = '') {
   for (const el of document.querySelectorAll('[data-dialog-notice]')) el.textContent = message;
 }
 async function api(path, body, method = 'POST') {
-  let response, data;
-  if (window.posApi) {
-    response = await window.posApi.request(path, body, method);
-    data = response.data;
-  } else {
-    response = await fetch(`/api/pos/${path}`, {
+  const epoch = sessionEpoch;
+  const response = await withDeadline((async () => {
+    if (window.posApi) return window.posApi.request(path, body, method);
+    const result = await fetch(`/api/pos/${path}`, {
       method: body === undefined ? 'GET' : method,
       credentials: 'same-origin',
       headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(15000),
     });
-    data = await response.json();
-  }
+    return { ok: result.ok, status: result.status, data: await result.json() };
+  })());
+  if (epoch !== sessionEpoch) throw Object.assign(new Error('เซสชันเดิมสิ้นสุดแล้ว'), { code: 'POS_STALE_SESSION' });
+  const data = response.data;
   if (!response.ok) {
-    if (response.status === 401) showLogin();
+    if (response.status === 401 && path !== 'login') {
+      showLogin();
+      notice('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่ ตะกร้าถูกล้างแล้ว บิลที่ส่งไปแล้วเก็บไว้ในเมนูบิลรอตรวจ');
+    }
     throw Object.assign(new Error(data.message || 'ทำรายการไม่สำเร็จ'), {
       status: response.status,
     });
@@ -67,11 +75,12 @@ async function api(path, body, method = 'POST') {
 }
 const run = (fn) => async (event) => {
   event?.preventDefault();
+  const epoch = sessionEpoch;
   try {
     notice();
     await fn(event);
   } catch (error) {
-    notice(error.message || 'เชื่อมต่อไม่ได้ กรุณาลองใหม่');
+    if (epoch === sessionEpoch) notice(error.message || 'เชื่อมต่อไม่ได้ กรุณาลองใหม่');
   }
 };
 let currentTableQr = null;
@@ -134,6 +143,47 @@ const tableOrdering = setupTableOrdering({
 });
 const kitchen = setupKitchen({ api, run, notice });
 function showLogin() {
+  sessionEpoch++;
+  clearTimeout(sessionTimer);
+  clearInterval(sessionHeartbeat);
+  clearTimeout(couponTimer);
+  try {
+    const previousUser = localStorage.getItem('pos-pending-user') || activeUserId;
+    archivePayment(localStorage, pending, previousUser);
+    if (previousUser) localStorage.removeItem(`pos-draft:${previousUser}`);
+    localStorage.removeItem('pos-open-request');
+  } catch { notice('เก็บบิลรอตรวจไม่สำเร็จ กรุณาตรวจพื้นที่จัดเก็บ บิลเดิมยังคงเก็บไว้บนเครื่อง'); }
+  pending = null;
+  cart = [];
+  products = [];
+  busy = false;
+  couponBusy = false;
+  scanning = false;
+  loginBusy = false;
+  shift = null;
+  activeUserId = null;
+  activeRole = null;
+  draft = { key: crypto.randomUUID(), coupon: null };
+  paymentMethod = 'CASH';
+  cashReceived = '';
+  currentReceipt = null;
+  currentShiftReport = null;
+  currentTableQr = null;
+  clearMember();
+  $('received').value = '';
+  $('transfer-received').value = '';
+  $('scan').value = '';
+  $('login-form').querySelector('button').disabled = false;
+  $('scan-form').querySelector('button').disabled = false;
+  $('open-form').querySelector('button').disabled = false;
+  $('close-form').querySelector('button').disabled = false;
+  $('login-form').elements.password.value = '';
+  $('open-form').reset();
+  $('close-form').reset();
+  openingCash.reset();
+  closingCash.reset();
+  $('cart').replaceChildren();
+  tableOrdering.clear();
   kitchen.stop();
   tableOrdering.stop();
   document.body.classList.remove('pos-active', 'kitchen-active');
@@ -143,11 +193,29 @@ function showLogin() {
   $('kitchen').hidden = true;
   $('operator').textContent = '';
   $('shift-panel').hidden = true;
-  for (const id of ['daily-report', 'history', 'hardware', 'logout', 'tables']) $(id).hidden = true;
+  for (const id of ['daily-report', 'history', 'hardware', 'logout', 'tables', 'recover-payments']) $(id).hidden = true;
 }
+function monitorSession(user) {
+  clearTimeout(sessionTimer);
+  clearInterval(sessionHeartbeat);
+  if (user.expiresAt) {
+    const remaining = new Date(user.expiresAt).getTime() - Date.now();
+    if (Number.isFinite(remaining)) sessionTimer = setTimeout(() => {
+      showLogin();
+      notice('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่ ตะกร้าถูกล้างแล้ว');
+    }, Math.max(0, remaining));
+  }
+  sessionHeartbeat = setInterval(() => { if (activeUserId) void api('me').catch(() => {}); }, 60000);
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && activeUserId) void api('me').catch(() => {});
+});
 async function start(user) {
+  const epoch = sessionEpoch;
   activeRole = user.role;
   await hardwareUI.refreshSettings();
+  if (epoch !== sessionEpoch) return;
+  monitorSession(user);
   if (user.role === 'CHEF') {
     tableOrdering.stop();
     activeUserId = user.id;
@@ -194,6 +262,7 @@ async function start(user) {
   $('shift-panel').hidden = false;
   for (const id of ['daily-report', 'history', 'hardware', 'logout', 'tables'])
     $(id).hidden = false;
+  $('recover-payments').hidden = false;
   await tableOrdering.refresh();
 
   tableOrdering.start();
@@ -201,6 +270,7 @@ async function start(user) {
   renderProducts();
   renderCart();
   $('scan').focus();
+  updateRecoveryCount();
   if (pending)
     notice('มีบิลที่ยังไม่ได้รับผลยืนยัน กดยืนยันอีกครั้งเพื่อตรวจและบันทึกบิลเดิม ห้ามรับเงินซ้ำ');
 }
@@ -348,10 +418,19 @@ function renderCart() {
       : 'ยืนยันรับเงินโอนและปิดบิล';
 }
 $('login-form').onsubmit = run(async (event) => {
+  if (loginBusy) return;
+  loginBusy = true;
+  const epoch = sessionEpoch;
+  const button = event.target.querySelector('button');
+  button.disabled = true;
+  try {
   const form = new FormData(event.target);
   const user = await api('login', Object.fromEntries(form));
   event.target.reset();
   await start(user);
+  } finally {
+    if (epoch === sessionEpoch) { loginBusy = false; button.disabled = false; }
+  }
 });
 $('logout').onclick = run(async () => {
   if (activeRole === 'CHEF') {
@@ -360,9 +439,7 @@ $('logout').onclick = run(async () => {
     return;
   }
   if (busy) return;
-  if (pending && localStorage.getItem('pos-pending-user') === activeUserId && !editable()) return;
-  if (couponBusy) return;
-  await releaseCoupon();
+  if (!pending && !couponBusy) await releaseCoupon();
   await api('logout', {});
   cart = [];
   clearMember();
@@ -371,6 +448,93 @@ $('logout').onclick = run(async () => {
   $('received').value = '';
   showLogin();
 });
+$('reset-terminal').onclick = () => {
+  showLogin();
+  notice('ล้างตะกร้าและสถานะหน้าจอแล้ว กรุณาเข้าสู่ระบบใหม่ บิลที่เคยส่งชำระเก็บไว้ในเมนูบิลรอตรวจ');
+};
+function updateRecoveryCount() {
+  try {
+    const count = recoveryPayments(localStorage).length + (pending ? 1 : 0);
+    $('recover-payments').textContent = `บิลรอตรวจ (${count})`;
+    if (count) notice(`มีบิลรอตรวจ ${count} รายการ เปิดเมนูบิลรอตรวจเพื่อตรวจผล ห้ามรับเงินซ้ำ`);
+  } catch { notice('อ่านรายการบิลรอตรวจไม่ได้ กรุณาติดต่อผู้ดูแล'); }
+}
+function renderRecoveryPayments() {
+  const entries = recoveryPayments(localStorage);
+  const rows = entries.map((entry) => {
+    const row = text('section', '', 'payment-recovery-row');
+    row.append(text('strong', `บิล ${entry.payload.key.slice(-8)} • ${money(entry.payload.expectedTotalSatang || 0)}`));
+    if (entry.userId && entry.userId !== activeUserId) {
+      row.append(text('p', 'กรุณาเข้าบัญชีพนักงานที่ส่งบิลเดิมเพื่อตรวจรายการนี้'));
+      return row;
+    }
+    const actions = text('div', '', 'payment-recovery-actions');
+    for (const [action, label] of [['CHECK', 'ตรวจผล'], ['REPLAY', 'ยืนยันบิลเดิม'], ['CANCEL', 'ยกเลิกบิลที่ยังไม่สำเร็จ']]) {
+      const button = text('button', label);
+      button.type = 'button';
+      button.onclick = run(async () => {
+        const epoch = sessionEpoch;
+        if (action !== 'CHECK' && !(await confirmAction(
+          action === 'REPLAY' ? 'ยืนยันการชำระด้วยข้อมูลบิลเดิม ห้ามรับเงินจากลูกค้าซ้ำ หากเคยสำเร็จระบบจะแสดงใบเสร็จเดิม' : 'ยกเลิกเฉพาะคำขอที่ยังไม่สำเร็จ หากชำระแล้วระบบจะแสดงบิลเดิม ไม่ลบยอดขาย',
+          { title: 'ตรวจบิลเดิม', confirmText: 'ยืนยัน' },
+        ))) return;
+        if (epoch !== sessionEpoch) return;
+        for (const control of actions.querySelectorAll('button')) control.disabled = true;
+        try {
+          const result = action === 'REPLAY'
+            ? { status: 'PAID', sale: await api('checkout', entry.payload) }
+            : await api('checkout/recover', { key: entry.payload.key, shiftId: entry.payload.shiftId, action });
+          if (result.status === 'PAID') {
+            forgetRecovery(localStorage, entry.payload.key);
+            $('payment-recovery-dialog').close();
+            receipt(result.sale);
+            $('print').disabled = false;
+            $('receipt-notice').textContent = 'บิลนี้บันทึกสำเร็จแล้ว ไม่ต้องรับเงินซ้ำ กดพิมพ์ซ้ำได้';
+            await refreshShift();
+            await tableOrdering.refresh();
+          } else if (result.status === 'CANCELLED') {
+            forgetRecovery(localStorage, entry.payload.key);
+            renderRecoveryPayments();
+            $('payment-recovery-status').textContent = 'ยกเลิกคำขอที่ไม่สำเร็จแล้ว สามารถเริ่มบิลใหม่ได้';
+          } else {
+            $('payment-recovery-status').textContent = 'ยังไม่พบบิลที่ชำระสำเร็จ ตรวจยอดเงินจริงก่อนเลือกยืนยันบิลเดิม หรือยกเลิกคำขอนี้';
+          }
+          updateRecoveryCount();
+        } catch (error) {
+          if (epoch === sessionEpoch) $('payment-recovery-status').textContent = error.status === 404
+            ? 'Backend ยังไม่รองรับตรวจบิล กรุณาอัปเดต backend บิลเดิมยังเก็บไว้ ห้ามรับเงินซ้ำ'
+            : error.message;
+        } finally {
+          if (epoch === sessionEpoch) for (const control of actions.querySelectorAll('button')) control.disabled = false;
+        }
+      });
+      actions.append(button);
+    }
+    row.append(actions);
+    return row;
+  });
+  if (!rows.length) rows.push(text('p', 'ไม่มีบิลรอตรวจ'));
+  $('payment-recovery-list').replaceChildren(...rows);
+}
+$('recover-payments').onclick = run(async () => {
+  if (busy) throw new Error('กำลังส่งบิล กรุณารอผล หรือกดล้างตะกร้า / เข้าสู่ระบบใหม่หากเครื่องค้าง');
+  if (pending) {
+    archivePayment(localStorage, pending, localStorage.getItem('pos-pending-user') || activeUserId);
+    pending = null;
+    cart = [];
+    draft = { key: crypto.randomUUID(), coupon: null };
+    clearTimeout(couponTimer);
+    clearMember();
+    tableOrdering.clear();
+    saveDraft();
+    renderCart();
+  }
+  renderRecoveryPayments();
+  updateRecoveryCount();
+  $('payment-recovery-status').textContent = '';
+  $('payment-recovery-dialog').showModal();
+});
+$('close-payment-recovery').onclick = () => $('payment-recovery-dialog').close();
 for (const button of document.querySelectorAll('[data-group]'))
   button.onclick = () => {
     productGroup = button.dataset.group;
@@ -547,6 +711,7 @@ for (const button of document.querySelectorAll('[data-payment-method]')) {
 }
 $('pay').onclick = run(async () => {
   if (busy) return;
+  const epoch = sessionEpoch;
   if (
     pending &&
     localStorage.getItem('pos-pending-user') &&
@@ -554,6 +719,8 @@ $('pay').onclick = run(async () => {
   )
     throw new Error('มีบิลค้างของพนักงานอีกบัญชี กรุณาออกแล้วเข้าบัญชีที่ส่งบิลเดิม');
   if (!pending) {
+    const abandoned = JSON.parse(localStorage.getItem('pos-pending') || 'null');
+    if (abandoned) archivePayment(localStorage, abandoned, localStorage.getItem('pos-pending-user'));
     if (!shift) throw new Error('กรุณาเปิดร้านก่อนคิดเงิน');
     if (!cart.length) return;
     const transferSatang = paymentMethod === 'MIXED' ? Math.round(Number($('transfer-received').value) * 100) : 0;
@@ -612,11 +779,15 @@ $('pay').onclick = run(async () => {
     $('receipt-print-qr').disabled = true;
     try {
       if (printQr) await previewReceiptQr();
+      if (epoch !== sessionEpoch) return;
       $('receipt-notice').textContent = await outputPaidSale(sale, printQr);
     } finally {
-      $('print').disabled = false;
-      $('receipt-print-qr').disabled = !sale.tableId && !sale.tableNumber;
+      if (epoch === sessionEpoch) {
+        $('print').disabled = false;
+        $('receipt-print-qr').disabled = !sale.tableId && !sale.tableNumber;
+      }
     }
+    if (epoch !== sessionEpoch) return;
     try {
       if (!configuredAtCheckout) await tableOrdering.configure(sale);
     } catch {
@@ -627,6 +798,7 @@ $('pay').onclick = run(async () => {
     await refreshShift();
     await tableOrdering.refresh();
   } catch (error) {
+    if (epoch !== sessionEpoch) return;
     // Validation rejects have no payment committed. Network and conflict errors retain the key.
     if (error.status === 400) {
       pending = null;
@@ -636,8 +808,7 @@ $('pay').onclick = run(async () => {
     notice(error.message);
     throw error;
   } finally {
-    busy = false;
-    renderCart();
+    if (epoch === sessionEpoch) { busy = false; renderCart(); }
   }
 });
 function receipt(sale, printQr = false) {
@@ -762,10 +933,15 @@ async function refreshShift() {
   return state;
 }
 let closingShiftId = null;
-const openingCash = setupOpeningCash(
+const openingCash = setupCashCount(
   $('open-form'),
   $('opening-cash-denominations'),
   $('open-form').elements.openingCash,
+);
+const closingCash = setupCashCount(
+  $('close-form'),
+  $('closing-cash-denominations'),
+  $('close-form').elements.countedCash,
 );
 $('open-store').onclick = () => {
   if (!editable()) return;
@@ -820,12 +996,16 @@ $('close-form').onsubmit = run(async (event) => {
   button.disabled = true;
   try {
     const data = new FormData(event.target);
+    const countedCashSatang = Math.round(Number(data.get('countedCash')) * 100);
+    if (!Number.isSafeInteger(countedCashSatang) || countedCashSatang < 0 || countedCashSatang > 100000000 || data.get('countedCash') === '')
+      throw new Error('กรุณาตรวจจำนวนธนบัตรและเหรียญก่อนปิดร้าน');
     const result = await api('shift/close', {
       shiftId: closingShiftId,
-      countedCashSatang: Math.round(Number(data.get('countedCash')) * 100),
+      countedCashSatang,
     });
     $('close-dialog').close();
     event.target.reset();
+    closingCash.reset();
     await refreshShift();
     notice(
       `ปิดร้านแล้ว • ยอดขาย ${money(result.summary.totalSatang)} • เงินสดขาด/เกิน ${money(result.shift.cashDifferenceSatang)}`,

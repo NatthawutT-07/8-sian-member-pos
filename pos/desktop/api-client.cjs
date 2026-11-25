@@ -18,6 +18,7 @@ function apiOrigin(config) {
 // Session stays in the main process, never exposed to the web page or saved on disk.
 function createApiClient(origin, fetchImpl = fetch) {
   let cookie = '';
+  let generation = 0;
   return async (route, body, method = 'POST') => {
     if (
       typeof route !== 'string' ||
@@ -26,6 +27,7 @@ function createApiClient(origin, fetchImpl = fetch) {
       !['GET', 'POST'].includes(method)
     )
       throw new Error('คำขอ POS ไม่ถูกต้อง');
+    const requestGeneration = route === 'login' ? ++generation : generation;
     const response = await fetchImpl(`${origin}/api/pos/${route}`, {
       method: body === undefined ? 'GET' : method,
       redirect: 'error',
@@ -37,10 +39,12 @@ function createApiClient(origin, fetchImpl = fetch) {
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(15000),
     });
+    if (requestGeneration === generation) {
     for (const value of response.headers.getSetCookie()) {
       if (/^(?:__Host-)?pos_session=/.test(value)) cookie = value.split(';')[0];
     }
     if (response.status === 401 || (route === 'logout' && response.ok)) cookie = '';
+    }
     const data = await response.json();
     return { ok: response.ok, status: response.status, data };
   };

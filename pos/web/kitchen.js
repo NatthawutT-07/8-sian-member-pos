@@ -1,8 +1,25 @@
 import { renderKitchenTicket } from './kitchen-ticket.js';
 import { confirmAction } from './confirm-action.js';
+import { createOrderAlert } from './order-alert.js';
 
 export function setupKitchen({ api, run, notice }) {
   const $ = (id) => document.getElementById(id);
+  const sound = createOrderAlert(new URL('./order-alert.wav', import.meta.url).href, (enabled, message) => {
+    $('kitchen-sound').setAttribute('aria-pressed', String(enabled));
+    $('kitchen-sound').textContent = enabled ? 'ปิดเสียงออเดอร์' : 'เปิดเสียงออเดอร์';
+    $('kitchen-sound-status').textContent = message;
+  });
+  $('kitchen-sound').setAttribute('aria-pressed', String(sound.enabled));
+  $('kitchen-sound').textContent = sound.enabled ? 'ปิดเสียงออเดอร์' : 'เปิดเสียงออเดอร์';
+  $('kitchen-sound-status').textContent = sound.enabled ? 'กดทดสอบเสียงเพื่อให้เครื่องพร้อมแจ้งเตือน' : 'เปิดเสียงเพื่อแจ้งเตือนออเดอร์ใหม่';
+  $('kitchen-sound').onclick = async () => {
+    try { if (sound.enabled) sound.disable(); else await sound.enable(); }
+    catch { $('kitchen-sound-status').textContent = 'เปิดเสียงไม่ได้ กรุณาลองอีกครั้งและตรวจระดับเสียงของเครื่อง'; }
+  };
+  $('kitchen-test-sound').onclick = async () => {
+    try { await sound.test(); }
+    catch { $('kitchen-sound-status').textContent = 'เล่นเสียงไม่ได้ กรุณาลองอีกครั้งและตรวจระดับเสียงของเครื่อง'; }
+  };
   const el = (tag, value, cls) => {
     const node = document.createElement(tag);
     node.textContent = value;
@@ -85,6 +102,7 @@ export function setupKitchen({ api, run, notice }) {
     try {
       const [orders, tables] = await Promise.all([api('kitchen/orders'), api('kitchen/tables')]);
       if (!active) return;
+      sound.observe(orders);
       const selected = $('kitchen-table').value;
       $('kitchen-table').replaceChildren(new Option('เลือกโต๊ะที่ยังมีลูกค้า', ''));
       for (const table of tables)
@@ -200,12 +218,14 @@ export function setupKitchen({ api, run, notice }) {
   });
   return {
     async start() {
+      sound.reset();
       active = true;
       clearInterval(timer);
       timer = setInterval(() => run(refresh)(), 5000);
       await refresh();
     },
     stop() {
+      sound.reset();
       active = false;
       clearInterval(timer);
       summary = null;
