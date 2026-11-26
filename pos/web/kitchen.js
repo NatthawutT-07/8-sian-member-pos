@@ -147,6 +147,25 @@ export function setupKitchen({ api, run, notice }) {
         card.append(header, el('p', `ออเดอร์ ${order.id.slice(-8)}`, 'hint'));
         for (const item of order.items) {
           const row = el('div', '', 'kitchen-order-item');
+          const placeholder = el('span', 'ไม่มีรูป', 'kitchen-item-image kitchen-item-placeholder');
+          let imageUrl;
+          try {
+            const url = new URL(item.imageUrl, location.href);
+            if (item.imageUrl && (url.protocol === 'https:' || url.origin === location.origin)
+              && url.pathname.startsWith('/api/ordering-images/')) imageUrl = url.href;
+          } catch {}
+          if (imageUrl) {
+            const image = document.createElement('img');
+            image.className = 'kitchen-item-image';
+            image.alt = item.name;
+            image.width = 36;
+            image.height = 36;
+            image.loading = 'lazy';
+            image.decoding = 'async';
+            image.onerror = () => image.replaceWith(placeholder);
+            image.src = imageUrl;
+            row.append(image);
+          } else row.append(placeholder);
           row.append(el('span', item.name), el('strong', `× ${item.quantity}`));
           const remove = el('button', 'ยกเลิก', 'kitchen-cancel-item');
           remove.setAttribute('aria-label', `ยกเลิก ${item.name} โต๊ะ ${order.table.number}`);

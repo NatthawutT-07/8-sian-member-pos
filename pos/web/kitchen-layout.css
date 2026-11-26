@@ -1,0 +1,16 @@
+/* Dense chef board; keep horizontal order navigation and readable item names. */
+@media screen {
+  #kitchen-orders { grid-auto-columns: min(250px, 88%); gap: 6px; }
+  #kitchen .kitchen-order { padding: 7px; border-radius: 7px; border-top-width: 3px; }
+  #kitchen .kitchen-order-heading { gap: 4px; }
+  #kitchen .kitchen-order h2 { font-size: 18px; }
+  #kitchen .kitchen-order-heading span, #kitchen .kitchen-order > .hint { font-size: 10px; }
+  #kitchen .kitchen-order > .hint { margin: 3px 0 5px; }
+  #kitchen .kitchen-order-item { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto auto; gap: 5px; padding: 4px 0; font-size: 12px; line-height: 1.4; }
+  #kitchen .kitchen-order-item > span { min-width: 0; overflow-wrap: anywhere; }
+  #kitchen .kitchen-item-image { width: 36px; height: 36px; object-fit: cover; border-radius: 5px; }
+  #kitchen .kitchen-item-placeholder { display: flex; align-items: center; justify-content: center; background: #edf0e8; color: #58685c; font-size: 8px; }
+  #kitchen .kitchen-cancel-item { min-height: 32px; padding: 3px 5px; font-size: 10px; }
+  #kitchen .kitchen-order-actions { gap: 4px; margin-top: 6px; }
+  #kitchen .kitchen-order-actions button { min-width: 0; min-height: 36px; padding: 4px 5px; font-size: 11px; }
+}
